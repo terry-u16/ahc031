@@ -61,10 +61,6 @@ struct State {
 }
 
 impl State {
-    fn new(lines: Vec<Vec<Option<i64>>>) -> Self {
-        Self { lines }
-    }
-
     fn init(input: &Input) -> Self {
         let mut lines = vec![];
 
