@@ -40,7 +40,16 @@ for i in range(N):
     )
 
 df = pd.DataFrame(array)
-ax = sns.violinplot(df)
+
+fig, _ = plt.subplots(1, 2, figsize=(15, 6))
+
+ax = plt.subplot(1, 2, 1)
+sns.violinplot(df, ax=ax)
 ax.set_ylim(0, T)
 
+trans = array.transpose()
+corrcoef = np.corrcoef(trans)
+
+ax = plt.subplot(1, 2, 2)
+sns.heatmap(corrcoef, vmin=-1, vmax=1, annot=True, fmt=".2f", square=True, ax=ax)
 plt.show()
