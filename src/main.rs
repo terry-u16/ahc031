@@ -134,6 +134,44 @@ impl State {
 
         Ok(score)
     }
+
+    fn calc_score_day(&self, env: &Env, day: usize) -> Result<i64, ()> {
+        let mut score = 0;
+        let mut areas = vec![];
+        let coord = &self.coords[day];
+
+        for r in env.coord_indices.rects.iter() {
+            let rect = coord.get_rect(r);
+            if !rect.is_valid() {
+                return Err(());
+            }
+
+            let area = rect.area();
+            areas.push(area);
+        }
+
+        glidesort::sort(&mut areas);
+
+        for (req, area) in env.input.requests[day].iter().zip(&areas) {
+            score += 100 * (req - area).max(0) as i64;
+        }
+
+        let since = day.saturating_sub(1);
+        let until = (day + 1).min(env.input.days - 1);
+
+        // 線分が偶然重なることを考慮していないので、厳密には正しくない
+        for l in env.coord_indices.lines.iter() {
+            let mut l0 = self.coords[since].get_line(l);
+
+            for coord in self.coords[since + 1..=until].iter() {
+                let l1 = coord.get_line(l);
+                score += l0.diff(&l1) as i64;
+                l0 = l1;
+            }
+        }
+
+        Ok(score)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -415,7 +453,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let new_state = if rng.gen_bool(0.5) {
+        let (day, index, x) = if rng.gen_bool(0.5) {
             // copy
             let pre = rng.gen_bool(0.5);
             let mut day = rng.gen_range(0..env.input.days - 1);
@@ -437,11 +475,9 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
                 continue;
             }
 
-            let mut new_state = state.clone();
             let ratio = rng.gen_range(0.1f64..1.5).min(1.0);
             let new_x = (x0 as f64 * ratio + x1 as f64 * (1.0 - ratio)).round() as i32;
-            new_state.coords[day].coords[index] = new_x;
-            new_state
+            (day, index, new_x)
         } else {
             // shift
             let day = rng.gen_range(0..env.input.days);
@@ -454,27 +490,31 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
                 continue;
             }
 
-            let mut new_state = state.clone();
-            new_state.coords[day].coords[index] = new_x;
-            new_state
+            (day, index, new_x)
         };
 
         // スコア計算
-        let Ok(new_score) = new_state.calc_score(&env) else {
+        let prev_score_day = state.calc_score_day(&env, day).unwrap();
+        let prev_x = state.coords[day].coords[index];
+        state.coords[day].coords[index] = x;
+
+        let Ok(new_score_day) = state.calc_score_day(&env, day) else {
+            state.coords[day].coords[index] = prev_x;
             continue;
         };
-        let score_diff = new_score - current_score;
+        let score_diff = new_score_day - prev_score_day;
 
         if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
             // 解の更新
-            current_score = new_score;
+            current_score += score_diff;
             accepted_count += 1;
-            state = new_state;
 
             if best_score.change_min(current_score) {
                 best_solution = state.clone();
                 update_count += 1;
             }
+        } else {
+            state.coords[day].coords[index] = prev_x;
         }
 
         valid_iter += 1;
