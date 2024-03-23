@@ -361,6 +361,10 @@ fn build_squares(sizes: &[i32]) -> (LineCoords, CoordIndices) {
     line_coords.coords.push(0);
     line_coords.coords.push(Input::W);
     line_coords.coords.push(Input::W);
+    coord_indices.lines.push(LineIndex::new(0, 2, 1));
+    coord_indices.lines.push(LineIndex::new(0, 2, 3));
+    coord_indices.lines.push(LineIndex::new(1, 3, 0));
+    coord_indices.lines.push(LineIndex::new(1, 3, 2));
 
     sq_dfs(
         0,
