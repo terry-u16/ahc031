@@ -415,7 +415,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let new_state = if rng.gen_bool(0.2) {
+        let new_state = if rng.gen_bool(0.5) {
             // copy
             let pre = rng.gen_bool(0.5);
             let mut day = rng.gen_range(0..env.input.days - 1);
@@ -425,23 +425,23 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
             let index = rng.gen_range(4..state.coords[day].coords.len());
 
-            if pre {
-                if state.coords[day].coords[index] == state.coords[day - 1].coords[index] {
-                    continue;
-                }
-
-                let mut new_state = state.clone();
-                new_state.coords[day].coords[index] = new_state.coords[day - 1].coords[index];
-                new_state
+            let x0 = if pre {
+                state.coords[day - 1].coords[index]
             } else {
-                if state.coords[day].coords[index] == state.coords[day + 1].coords[index] {
-                    continue;
-                }
+                state.coords[day + 1].coords[index]
+            };
 
-                let mut new_state = state.clone();
-                new_state.coords[day].coords[index] = new_state.coords[day + 1].coords[index];
-                new_state
+            let x1 = state.coords[day].coords[index];
+
+            if x0 == x1 {
+                continue;
             }
+
+            let mut new_state = state.clone();
+            let ratio = rng.gen_range(0.1f64..1.5).min(1.0);
+            let new_x = (x0 as f64 * ratio + x1 as f64 * (1.0 - ratio)).round() as i32;
+            new_state.coords[day].coords[index] = new_x;
+            new_state
         } else {
             // shift
             let day = rng.gen_range(0..env.input.days);
