@@ -1,4 +1,5 @@
 pub mod annealier2d;
+pub mod bin_packing;
 
 use std::fmt::Display;
 
