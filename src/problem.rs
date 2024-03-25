@@ -1,7 +1,7 @@
 pub mod annealier2d;
 pub mod bin_packing;
 
-use std::fmt::Display;
+use std::{fmt::Display, time::Instant};
 
 use proconio::input;
 
@@ -10,6 +10,7 @@ pub struct Input {
     pub days: usize,
     pub n: usize,
     pub requests: Vec<Vec<i32>>,
+    pub since: Instant,
 }
 
 impl Input {
@@ -23,7 +24,14 @@ impl Input {
             requests: [[i32; n]; days],
         }
 
-        Self { days, n, requests }
+        let since = Instant::now();
+
+        Self {
+            days,
+            n,
+            requests,
+            since,
+        }
     }
 }
 
@@ -51,6 +59,6 @@ impl Rect {
 
 impl Display for Rect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {} {}", self.x0, self.y0, self.x1, self.y1)
+        write!(f, "{} {} {} {}", self.y0, self.x0, self.y1, self.x1)
     }
 }

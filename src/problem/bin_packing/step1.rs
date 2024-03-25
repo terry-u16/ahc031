@@ -17,7 +17,7 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
 
     let mut dividers = vec![0, Input::W];
 
-    for div in 2..=input.n {
+    for div in 2..input.n {
         let lines = (0..=div)
             .map(|i| (Input::W as usize * i / div) as i32)
             .collect_vec();
