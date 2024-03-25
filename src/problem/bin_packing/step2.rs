@@ -21,12 +21,12 @@ pub fn devide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
             State::new(lines)
         });
 
-        const TRIAL_COUNT: usize = 5;
+        let trial_count = (3000 / (input.days * input.n)).max(5);
         let mut best_score = state.calc_score(&env).unwrap();
         let mut best_state = state.clone();
 
-        for _ in 0..TRIAL_COUNT {
-            let duration = each_duration / TRIAL_COUNT as f64;
+        for _ in 0..trial_count {
+            let duration = each_duration / trial_count as f64;
             let mut state = annealing(&env, state.clone(), duration);
             let score = state.calc_score(&env).unwrap();
 
