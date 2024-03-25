@@ -21,21 +21,17 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
         let lines = (0..=div)
             .map(|i| (Input::W as usize * i / div) as i32)
             .collect_vec();
-        let mut state = State::new(lines);
-
-        if div >= 3 {
-            state = annealing(input, state, 0.01);
-        }
-
-        let mut w = state
-            .lines
+        let widths = lines
             .iter()
             .tuple_windows()
             .map(|(&a, &b)| b - a)
             .collect_vec();
-        w.sort_unstable();
+        let mut state = State::new(widths);
+        state = annealing(input, state, 0.01);
+
+        state.widths.sort_unstable();
         let score = state.calc_score(input).unwrap();
-        eprintln!("[Div {}] score: {}, {:?}", div, score, w);
+        eprintln!("[Div {}] score: {}, {:?}", div, score, state.widths);
 
         if score > 0 {
             break;
@@ -43,7 +39,7 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
 
         let mut divs = vec![0];
 
-        for &w in w.iter() {
+        for &w in state.widths.iter() {
             let w = w + divs.last().unwrap();
             divs.push(w);
         }
@@ -56,30 +52,23 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
 
 #[derive(Debug, Clone)]
 struct State {
-    lines: Vec<i32>,
+    widths: Vec<i32>,
 }
 
 impl State {
-    fn new(lines: Vec<i32>) -> Self {
-        Self { lines }
+    fn new(widths: Vec<i32>) -> Self {
+        Self { widths }
     }
 
     fn calc_score(&self, input: &Input) -> Result<i64, ()> {
-        let mut bins = vec![];
-
-        for (&a, &b) in self.lines.iter().tuple_windows() {
-            let diff = b - a;
-
-            if diff <= 0 {
-                return Err(());
-            }
-
-            bins.push(diff * Input::W);
+        if self.widths.iter().any(|&w| w <= 0) {
+            return Err(());
         }
 
         let mut score = 0;
 
-        let mut used = vec![false; bins.len()];
+        let mut used = vec![false; self.widths.len()];
+        let bins = self.widths.iter().map(|&w| w * Input::W).collect_vec();
 
         for reqs in input.requests.iter() {
             let mut bins = bins.clone();
@@ -148,11 +137,18 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
         }
 
         // 変形
-        let i = rng.gen_range(1..solution.lines.len() - 2);
+        let i = rng.gen_range(0..solution.widths.len());
+        let mut j = rng.gen_range(0..solution.widths.len() - 1);
+
+        if j >= i {
+            j += 1;
+        }
+
         let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
         let dx = sign * 10f64.powf(rng.gen_range(0.0..2.0)).round() as i32;
         let mut new_state = solution.clone();
-        new_state.lines[i] += dx;
+        new_state.widths[i] -= dx;
+        new_state.widths[j] += dx;
 
         // スコア計算
         let Ok(new_score) = new_state.calc_score(input) else {
