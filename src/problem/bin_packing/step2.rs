@@ -8,22 +8,18 @@ use crate::{
 
 pub fn devide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
     let mut rects = vec![];
-    let mut prev_lines = None;
+    let mut prev_state = None;
     let each_duration = (2.9 - input.since.elapsed().as_secs_f64()) / input.days as f64;
 
     for day in 0..input.days {
-        let env = Env::new(&input, dividers, day, prev_lines.clone());
-        let prev_l = prev_lines.unwrap_or_else(|| {
+        let env = Env::new(&input, dividers, day, prev_state.clone());
+        let mut state = prev_state.unwrap_or_else(|| {
             let separator_count = input.n - (dividers.len() - 1);
             let lines = (1..=separator_count)
                 .map(|i| Separator::new(0, i as i32))
                 .collect_vec();
-            lines
+            State::new(lines)
         });
-
-        let day_len = if day < input.days - 1 { 2 } else { 1 };
-        let v = vec![prev_l; day_len];
-        let mut state = State::new(v);
 
         const TRIAL_COUNT: usize = 5;
         let mut best_score = state.calc_score(&env).unwrap();
@@ -40,7 +36,7 @@ pub fn devide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
         }
 
         rects.push(best_state.to_rects(&env));
-        prev_lines = Some(best_state.lines[0].clone());
+        prev_state = Some(best_state);
     }
 
     rects
@@ -52,16 +48,11 @@ struct Env<'a> {
     dividers: &'a [i32],
     widths: Vec<i32>,
     day: usize,
-    prev_lines: Option<Vec<Separator>>,
+    prev_state: Option<State>,
 }
 
 impl<'a> Env<'a> {
-    fn new(
-        input: &'a Input,
-        dividers: &'a [i32],
-        day: usize,
-        prev_lines: Option<Vec<Separator>>,
-    ) -> Self {
+    fn new(input: &'a Input, dividers: &'a [i32], day: usize, prev_state: Option<State>) -> Self {
         let widths = dividers
             .iter()
             .tuple_windows()
@@ -73,62 +64,43 @@ impl<'a> Env<'a> {
             dividers,
             widths,
             day,
-            prev_lines,
+            prev_state,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct State {
-    lines: Vec<Vec<Separator>>,
+    lines: Vec<Separator>,
 }
 
 impl State {
-    fn new(mut lines: Vec<Vec<Separator>>) -> Self {
-        for lines in lines.iter_mut() {
-            glidesort::sort(lines);
-        }
-
+    fn new(mut lines: Vec<Separator>) -> Self {
+        glidesort::sort(&mut lines);
         Self { lines }
     }
 
-    fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
-        for lines in self.lines.iter_mut() {
-            glidesort::sort(lines);
-        }
+    fn calc_score(&mut self, env: &Env) -> Result<i32, ()> {
+        glidesort::sort(&mut self.lines);
+        let mut score = self.calc_area_score(env)?;
 
-        let mut mul = 10;
-
-        let mut prev_lines = env.prev_lines.as_ref();
-
-        let mut day = env.day;
-        let mut score = 0;
-
-        for lines in self.lines.iter() {
-            score += Self::calc_area_score(env, &self.lines[day - env.day], day)? * mul;
-
-            if let Some(prev_lines) = prev_lines {
-                score += Self::calc_line_score(env, &prev_lines, &self.lines[day - env.day]) * mul;
-            }
-
-            prev_lines = Some(lines);
-            mul /= 10;
-            day += 1;
+        if let Some(prev_state) = &env.prev_state {
+            score += self.calc_line_score(env, prev_state);
         }
 
         Ok(score)
     }
 
-    fn calc_area_score(env: &Env<'_>, lines: &[Separator], day: usize) -> Result<i64, ()> {
+    fn calc_area_score(&self, env: &Env<'_>) -> Result<i32, ()> {
         let mut areas = Vec::with_capacity(env.input.n);
         let mut pointer = 0;
 
         for (i, &width) in env.widths.iter().enumerate() {
             let mut y = 0;
 
-            while pointer < lines.len() && lines[pointer].index == i {
-                let area = (lines[pointer].y - y) * width;
-                y = lines[pointer].y;
+            while pointer < self.lines.len() && self.lines[pointer].index == i {
+                let area = (self.lines[pointer].y - y) * width;
+                y = self.lines[pointer].y;
 
                 if area <= 0 {
                     return Err(());
@@ -151,21 +123,21 @@ impl State {
 
         let mut score = 0;
 
-        for (&req, &area) in env.input.requests[day].iter().zip(areas.iter()) {
+        for (&req, &area) in env.input.requests[env.day].iter().zip(areas.iter()) {
             let diff = req - area;
-            score += diff.max(0) as i64 * 100;
+            score += diff.max(0) * 100;
         }
 
         Ok(score)
     }
 
-    fn calc_line_score(env: &Env, prev_lines: &[Separator], lines: &[Separator]) -> i64 {
+    fn calc_line_score(&self, env: &Env, prev_state: &State) -> i32 {
         let mut score = 0;
         let mut ptr0 = 0;
         let mut ptr1 = 0;
 
-        let lines0 = prev_lines;
-        let lines1 = lines;
+        let lines0 = &prev_state.lines;
+        let lines1 = &self.lines;
         let inf = Separator::new(usize::MAX, i32::MAX);
 
         while ptr0 < lines0.len() || ptr1 < lines1.len() {
@@ -184,20 +156,19 @@ impl State {
             }
         }
 
-        score as i64
+        score
     }
 
     fn to_rects(&self, env: &Env) -> Vec<Rect> {
         let mut rects = vec![];
         let mut pointer = 0;
-        let lines = &self.lines[0];
 
         for (i, (&x0, &x1)) in env.dividers.iter().tuple_windows().enumerate() {
             let mut y = 0;
 
-            while pointer < lines.len() && lines[pointer].index == i {
-                let rect = Rect::new(x0, y, x1, lines[pointer].y);
-                y = lines[pointer].y;
+            while pointer < self.lines.len() && self.lines[pointer].index == i {
+                let rect = Rect::new(x0, y, x1, self.lines[pointer].y);
+                y = self.lines[pointer].y;
 
                 assert!(rect.is_valid());
 
@@ -241,7 +212,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 1e8;
+    let temp0 = 1e7;
     let temp1 = 1e1;
     let mut inv_temp = 1.0 / temp0;
 
@@ -258,44 +229,33 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..2);
+        let neigh_type = rng.gen_range(0..4);
 
         let mut new_state = if neigh_type == 0 {
-            let day = rng.gen_range(0..state.lines.len());
-            let index = rng.gen_range(0..state.lines[day].len());
+            let index = rng.gen_range(0..state.lines.len());
             let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
             let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
             let mut new_state = state.clone();
-            new_state.lines[day][index].y += dy;
+            new_state.lines[index].y += dy;
             new_state
         } else if neigh_type == 1 {
-            let day = rng.gen_range(0..state.lines.len());
-            let index = rng.gen_range(0..state.lines[day].len());
+            let index = rng.gen_range(0..state.lines.len());
             let new_index = rng.gen_range(0..env.widths.len());
             let new_y = rng.gen_range(1..Input::W);
             let mut new_state = state.clone();
-            new_state.lines[day][index] = Separator::new(new_index, new_y);
+            new_state.lines[index] = Separator::new(new_index, new_y);
             new_state
         } else if neigh_type == 2 {
-            let day = rng.gen_range(0..state.lines.len());
-
-            let prev_lines = if day == 0 {
-                let Some(prev_lines) = &env.prev_lines else {
-                    continue;
-                };
-
-                prev_lines
-            } else {
-                &state.lines[0]
+            let Some(prev_state) = &env.prev_state else {
+                continue;
             };
 
-            let i0 = rng.gen_range(0..prev_lines.len());
-            let i1 = rng.gen_range(0..state.lines[day].len());
+            let i0 = rng.gen_range(0..prev_state.lines.len());
+            let i1 = rng.gen_range(0..state.lines.len());
             let mut new_state = state.clone();
-            new_state.lines[day][i1] = prev_lines[i0];
+            new_state.lines[i1] = prev_state.lines[i0];
             new_state
         } else {
-            let day = rng.gen_range(0..state.lines.len());
             let index0 = rng.gen_range(0..env.widths.len());
             let diff = rng.gen_range(1..=3);
 
@@ -311,7 +271,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
             let mut new_state = state.clone();
 
-            for sep in new_state.lines[day].iter_mut() {
+            for sep in new_state.lines.iter_mut() {
                 let index = sep.index;
 
                 let new_sep = if index == index0 {
