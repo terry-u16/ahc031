@@ -229,7 +229,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..3);
+        let neigh_type = rng.gen_range(0..4);
 
         let mut new_state = if neigh_type == 0 {
             let index = rng.gen_range(0..state.lines.len());
@@ -245,7 +245,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let mut new_state = state.clone();
             new_state.lines[index] = Separator::new(new_index, new_y);
             new_state
-        } else {
+        } else if neigh_type == 2 {
             let Some(prev_state) = &env.prev_state else {
                 continue;
             };
@@ -254,6 +254,37 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let i1 = rng.gen_range(0..state.lines.len());
             let mut new_state = state.clone();
             new_state.lines[i1] = prev_state.lines[i0];
+            new_state
+        } else {
+            let index0 = rng.gen_range(0..env.widths.len());
+            let diff = rng.gen_range(1..=3);
+
+            let index1 = if rng.gen_bool(0.5) {
+                index0 + diff
+            } else {
+                index0.wrapping_sub(diff)
+            };
+
+            if index1 >= env.widths.len() {
+                continue;
+            }
+
+            let mut new_state = state.clone();
+
+            for sep in new_state.lines.iter_mut() {
+                let index = sep.index;
+
+                let new_sep = if index == index0 {
+                    Separator::new(index1, sep.y)
+                } else if index == index1 {
+                    Separator::new(index0, sep.y)
+                } else {
+                    Separator::new(index, sep.y)
+                };
+
+                *sep = new_sep;
+            }
+
             new_state
         };
 
