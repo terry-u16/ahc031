@@ -6,7 +6,7 @@
   "RunnerOption": {
     "StartSeed": 0,
     "EndSeed": 256,
-    "ReferenceScore": 10000000,
+    "ReferenceScore": 1000000,
     "LocalParallelCount": 16,
     "CloudParallelCount": 300,
     "SummaryFilePath": ".\\data\\score_history.txt",
