@@ -75,12 +75,14 @@ struct State {
 }
 
 impl State {
+    const SCORE_MUL: i64 = 1000000;
+
     fn new(mut lines: Vec<Separator>) -> Self {
         glidesort::sort(&mut lines);
         Self { lines }
     }
 
-    fn calc_score(&mut self, env: &Env) -> Result<i32, ()> {
+    fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
         glidesort::sort(&mut self.lines);
         let mut score = self.calc_area_score(env)?;
 
@@ -91,7 +93,7 @@ impl State {
         Ok(score)
     }
 
-    fn calc_area_score(&self, env: &Env<'_>) -> Result<i32, ()> {
+    fn calc_area_score(&self, env: &Env<'_>) -> Result<i64, ()> {
         let mut areas = Vec::with_capacity(env.input.n);
         let mut pointer = 0;
 
@@ -122,16 +124,21 @@ impl State {
         glidesort::sort(&mut areas);
 
         let mut score = 0;
+        let days = env.day..(env.day + 1).min(env.input.days);
 
-        for (&req, &area) in env.input.requests[env.day].iter().zip(areas.iter()) {
-            let diff = req - area;
-            score += diff.max(0) * 100;
+        for (day, &mul) in days.zip([Self::SCORE_MUL, 1].iter()) {
+            let mul = mul * 100;
+
+            for (&req, &area) in env.input.requests[day].iter().zip(areas.iter()) {
+                let diff = (req - area) as i64;
+                score += diff.max(0) * mul;
+            }
         }
 
         Ok(score)
     }
 
-    fn calc_line_score(&self, env: &Env, prev_state: &State) -> i32 {
+    fn calc_line_score(&self, env: &Env, prev_state: &State) -> i64 {
         let mut score = 0;
         let mut ptr0 = 0;
         let mut ptr1 = 0;
@@ -156,7 +163,7 @@ impl State {
             }
         }
 
-        score
+        score as i64 * Self::SCORE_MUL
     }
 
     fn to_rects(&self, env: &Env) -> Vec<Rect> {
@@ -212,8 +219,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 1e7;
-    let temp1 = 1e1;
+    let temp0 = 1e13;
+    let temp1 = 1e3;
     let mut inv_temp = 1.0 / temp0;
 
     loop {
