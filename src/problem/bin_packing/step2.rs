@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rand::{Rng as _, SeedableRng};
+use rand::prelude::*;
 
 use crate::{
     common::ChangeMinMax as _,
@@ -236,7 +236,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..4);
+        let neigh_type = rng.gen_range(0..5);
 
         let mut new_state = if neigh_type == 0 {
             let index = rng.gen_range(0..state.lines.len());
@@ -262,7 +262,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let mut new_state = state.clone();
             new_state.lines[i1] = prev_state.lines[i0];
             new_state
-        } else {
+        } else if neigh_type == 3 {
             let index0 = rng.gen_range(0..env.widths.len());
             let diff = rng.gen_range(1..=3);
 
@@ -290,6 +290,45 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
                 };
 
                 *sep = new_sep;
+            }
+
+            new_state
+        } else {
+            let i = rng.gen_range(0..env.widths.len());
+
+            let mut targets = vec![];
+
+            for (j, l) in state.lines.iter().enumerate() {
+                if l.index == i {
+                    targets.push(j);
+                }
+            }
+
+            if targets.len() == 0 {
+                continue;
+            }
+
+            glidesort::sort_by_key(&mut targets, |j| state.lines[*j].y);
+
+            let mut y = 0;
+            let mut dy = vec![];
+
+            for &j in targets.iter() {
+                dy.push(state.lines[j].y - y);
+                y = state.lines[j].y;
+            }
+
+            dy.push(Input::W - y);
+
+            dy.shuffle(&mut rng);
+
+            let mut y = 0;
+
+            let mut new_state = state.clone();
+
+            for (&j, &dy) in targets.iter().zip(dy.iter()) {
+                y += dy;
+                new_state.lines[j].y = y;
             }
 
             new_state
