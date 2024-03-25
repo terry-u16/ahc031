@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rand::Rng as _;
+use rand::{Rng as _, SeedableRng};
 
 use crate::{common::ChangeMinMax, solver::Solver};
 
@@ -21,11 +21,23 @@ impl Solver for BinPacking1d {
         );
 
         for div in 2..=input.n {
-            let lines = (0..=div)
-                .map(|i| (Input::W as usize * i / div) as i32)
+            let max_req = input
+                .requests
+                .iter()
+                .map(|reqs| reqs.iter().max().unwrap())
+                .max()
+                .unwrap();
+            let max_w = (max_req + Input::W - 1) / Input::W;
+            let mut lines = (0..div)
+                .map(|i| ((Input::W - max_w) as usize * i / (div - 1)) as i32)
                 .collect_vec();
-            let state = State::new(lines);
-            let state = annealing(input, state, 0.1);
+            lines.push(Input::W);
+            let mut state = State::new(lines);
+
+            if div >= 3 {
+                state = annealing(input, state, 0.01);
+            }
+
             let mut w = state
                 .lines
                 .iter()
@@ -61,7 +73,7 @@ impl State {
         for (&a, &b) in self.lines.iter().tuple_windows() {
             let diff = b - a;
 
-            if diff < 10 {
+            if diff <= 0 {
                 return Err(());
             }
 
@@ -70,8 +82,11 @@ impl State {
 
         let mut score = 0;
 
+        let mut used = vec![false; bins.len()];
+
         for reqs in input.requests.iter() {
             let mut bins = bins.clone();
+            used.fill(false);
 
             // best-fit algoithm
             for &req in reqs.iter().rev() {
@@ -92,11 +107,15 @@ impl State {
                 }
 
                 bins[best_i] -= req;
+                used[best_i] = true;
             }
 
             for &b in bins.iter() {
                 score += (-b).max(0) as i64;
             }
+
+            // 未使用の仕切りがあればペナルティ
+            score += used.iter().filter(|&&b| !b).count() as i64 * 100;
         }
 
         Ok(score)
@@ -110,7 +129,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
     let mut best_score = current_score;
 
     let mut all_iter = 0;
-    let mut rng = rand_pcg::Pcg64Mcg::new(42);
+    let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
 
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
@@ -132,7 +151,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
         }
 
         // 変形
-        let i = rng.gen_range(1..solution.lines.len() - 1);
+        let i = rng.gen_range(1..solution.lines.len() - 2);
         let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
         let dx = sign * 10f64.powf(rng.gen_range(0.0..2.0)).round() as i32;
         let mut new_state = solution.clone();
