@@ -22,13 +22,13 @@ pub fn devide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
         });
 
         let trial_count = (3000 / (input.days * input.n)).max(5);
-        let mut best_score = state.calc_score(&env).unwrap().to_scalar(1.0);
+        let mut best_score = state.calc_score(&env).unwrap();
         let mut best_state = state.clone();
 
         for _ in 0..trial_count {
             let duration = each_duration / trial_count as f64;
             let mut state = annealing(&env, state.clone(), duration);
-            let score = state.calc_score(&env).unwrap().to_scalar(1.0);
+            let score = state.calc_score(&env).unwrap();
 
             if best_score.change_min(score) {
                 best_state = state;
@@ -82,16 +82,15 @@ impl State {
         Self { lines }
     }
 
-    fn calc_score(&mut self, env: &Env) -> Result<Score, ()> {
+    fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
         glidesort::sort(&mut self.lines);
-        let area_score = self.calc_area_score(env)?;
-        let mut line_score = 0;
+        let mut score = self.calc_area_score(env)?;
 
         if let Some(prev_state) = &env.prev_state {
-            line_score += self.calc_line_score(env, prev_state);
+            score += self.calc_line_score(env, prev_state);
         }
 
-        Ok(Score::new(area_score, line_score))
+        Ok(score)
     }
 
     fn calc_area_score(&self, env: &Env<'_>) -> Result<i64, ()> {
@@ -209,30 +208,10 @@ impl Separator {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Score {
-    area: i64,
-    line: i64,
-}
-
-impl Score {
-    fn new(area: i64, line: i64) -> Self {
-        Self { area, line }
-    }
-
-    fn to_scalar(&self, progress: f64) -> f64 {
-        const POW0: f64 = 1e-2;
-        const POW1: f64 = 1e0;
-        let pow = POW0.powf(1.0 - progress) * POW1.powf(progress);
-
-        self.area as f64 * pow + self.line as f64
-    }
-}
-
 fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let mut current_score = state.calc_score(&env).unwrap();
     let mut best_solution = state.clone();
-    let mut best_score = current_score.to_scalar(1.0);
+    let mut best_score = current_score;
 
     let mut all_iter = 0;
     let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
@@ -240,15 +219,14 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 1e10;
-    let temp1 = 1e2;
-    let mut time = (std::time::Instant::now() - since).as_secs_f64() * duration_inv;
+    let temp0 = 1e13;
+    let temp1 = 1e3;
     let mut inv_temp = 1.0 / temp0;
 
     loop {
         all_iter += 1;
         if (all_iter & ((1 << 4) - 1)) == 0 {
-            time = (std::time::Instant::now() - since).as_secs_f64() * duration_inv;
+            let time = (std::time::Instant::now() - since).as_secs_f64() * duration_inv;
             let temp = f64::powf(temp0, 1.0 - time) * f64::powf(temp1, time);
             inv_temp = 1.0 / temp;
 
@@ -360,14 +338,14 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         let Ok(new_score) = new_state.calc_score(&env) else {
             continue;
         };
-        let score_diff = new_score.to_scalar(time) - current_score.to_scalar(time);
+        let score_diff = new_score - current_score;
 
-        if score_diff <= 0.0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
+        if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
             // 解の更新
             current_score = new_score;
             state = new_state;
 
-            if best_score.change_min(current_score.to_scalar(1.0)) {
+            if best_score.change_min(current_score) {
                 best_solution = state.clone();
             }
         }
