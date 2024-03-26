@@ -104,6 +104,9 @@ impl State {
             score += used.iter().filter(|&&b| !b).count() as i64 * 100;
         }
 
+        // 最大幅が小さいほどボーナス
+        score -= (Input::W / 2 - *self.widths.iter().max().unwrap()) as i64 / 10;
+
         Ok(score)
     }
 }
