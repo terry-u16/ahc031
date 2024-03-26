@@ -15,6 +15,7 @@ pub struct Input {
 
 impl Input {
     pub const W: i32 = 1000;
+    pub const AREA_MUL: i32 = 100;
 
     pub fn read() -> Self {
         input! {
