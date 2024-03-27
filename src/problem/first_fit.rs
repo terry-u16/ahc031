@@ -191,7 +191,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
         // 変形
         let neigh_type = rng.gen_range(0..10);
 
-        let new_state = if neigh_type < 8 {
+        let mut new_state = if neigh_type < 8 {
             if state.len() <= 1 {
                 continue;
             }
@@ -246,6 +246,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
             new_state.widths.remove(j);
             new_state
         };
+        new_state.widths.sort_unstable();
 
         // スコア計算
         let new_score = new_state.calc_score(input);
