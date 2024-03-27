@@ -7,7 +7,7 @@ pub struct FirstFitPacking;
 
 impl Solver for FirstFitPacking {
     fn solve(&mut self, input: &Input) -> Vec<Vec<Rect>> {
-        let state = State::new(vec![Input::W]);
+        let state = State::new(vec![Input::W], vec![false; input.n]);
         let state = annealing(input, state, 2.9);
         eprintln!("{:?}", state);
 
@@ -18,11 +18,12 @@ impl Solver for FirstFitPacking {
 #[derive(Debug, Clone)]
 struct State {
     widths: Vec<i32>,
+    directions: Vec<bool>,
 }
 
 impl State {
-    fn new(widths: Vec<i32>) -> Self {
-        Self { widths }
+    fn new(widths: Vec<i32>, directions: Vec<bool>) -> Self {
+        Self { widths, directions }
     }
 
     fn len(&self) -> usize {
@@ -46,21 +47,36 @@ impl State {
 
             y_lanes.fill(0);
 
-            for &request in requests.iter().rev() {
+            for (rect_j, &request) in requests.iter().enumerate().rev() {
                 let mut next_i = !0;
                 let mut next_y = i32::MAX;
 
                 // first-fitをする
-                for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
-                    let dy = (request + width - 1) / width;
-                    let y = y + dy;
+                if self.directions[rect_j] {
+                    for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate().rev() {
+                        let dy = (request + width - 1) / width;
+                        let y = y + dy;
 
-                    if next_y.change_min(y) {
-                        next_i = i;
+                        if next_y.change_min(y) {
+                            next_i = i;
+                        }
+
+                        if next_y <= Input::W {
+                            break;
+                        }
                     }
+                } else {
+                    for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
+                        let dy = (request + width - 1) / width;
+                        let y = y + dy;
 
-                    if next_y <= Input::W {
-                        break;
+                        if next_y.change_min(y) {
+                            next_i = i;
+                        }
+
+                        if next_y <= Input::W {
+                            break;
+                        }
                     }
                 }
 
@@ -104,16 +120,31 @@ impl State {
                 let mut next_y = i32::MAX;
 
                 // first-fitをする
-                for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
-                    let dy = (request + width - 1) / width;
-                    let y = y + dy;
+                if self.directions[rect_j] {
+                    for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate().rev() {
+                        let dy = (request + width - 1) / width;
+                        let y = y + dy;
 
-                    if next_y.change_min(y) {
-                        next_i = i;
+                        if next_y.change_min(y) {
+                            next_i = i;
+                        }
+
+                        if next_y <= Input::W {
+                            break;
+                        }
                     }
+                } else {
+                    for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
+                        let dy = (request + width - 1) / width;
+                        let y = y + dy;
 
-                    if next_y <= Input::W {
-                        break;
+                        if next_y.change_min(y) {
+                            next_i = i;
+                        }
+
+                        if next_y <= Input::W {
+                            break;
+                        }
                     }
                 }
 
@@ -189,7 +220,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..10);
+        let neigh_type = rng.gen_range(0..15);
 
         let mut new_state = if neigh_type < 8 {
             if state.len() <= 1 {
@@ -229,7 +260,7 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
             new_state.widths[i] -= dw;
             new_state.widths.push(dw);
             new_state
-        } else {
+        } else if neigh_type == 9 {
             if state.len() <= 1 {
                 continue;
             }
@@ -245,7 +276,13 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
             new_state.widths[i] += new_state.widths[j];
             new_state.widths.remove(j);
             new_state
+        } else {
+            let i = rng.gen_range(0..state.directions.len());
+            let mut new_state = state.clone();
+            new_state.directions[i] ^= true;
+            new_state
         };
+
         new_state.widths.sort_unstable();
 
         // スコア計算
