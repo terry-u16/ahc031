@@ -34,6 +34,16 @@ impl Input {
             since,
         }
     }
+
+    pub fn packing_ratio(&self) -> f64 {
+        let mut sum = self
+            .requests
+            .iter()
+            .map(|reqs| reqs.iter().sum::<i32>() as f64)
+            .sum::<f64>();
+        sum /= self.days as f64 * Self::W as f64 * Self::W as f64;
+        sum
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
