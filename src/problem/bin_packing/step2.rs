@@ -6,7 +6,7 @@ use crate::{
     problem::{Input, Rect},
 };
 
-pub fn devide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
+pub fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
     let mut rects = vec![];
     let mut prev_state = None;
     let each_duration = (2.9 - input.since.elapsed().as_secs_f64()) / input.days as f64;

@@ -12,7 +12,7 @@ impl Solver for BinPacking1d {
         eprintln!("{:?}", dividers);
 
         let rects = if dividers.len() >= 3 {
-            step2::devide(input, &dividers)
+            step2::divide(input, &dividers)
         } else {
             let mut solver = annealier2d::Annealer2d;
             solver.solve(&input)
