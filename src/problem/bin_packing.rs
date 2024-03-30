@@ -1,4 +1,4 @@
-pub mod step1;
+mod step1;
 mod step2;
 
 use super::{Input, Rect};

@@ -1,7 +1,6 @@
 pub mod annealier2d;
 pub mod bin_packing;
 pub mod first_fit;
-pub mod climbing;
 
 use std::{fmt::Display, time::Instant};
 
