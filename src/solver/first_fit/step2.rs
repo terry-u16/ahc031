@@ -118,9 +118,15 @@ impl State {
         for (i, &width) in env.widths.iter().enumerate() {
             let mut y = 0;
 
-            while pointer < lines.len() && lines[pointer].index == i {
-                let area = (lines[pointer].y - y) * width;
-                y = lines[pointer].y;
+            while pointer < lines.len() {
+                let line = &lines[pointer];
+
+                if line.index != i {
+                    break;
+                }
+
+                let area = (line.y - y) * width;
+                y = line.y;
 
                 if area <= 0 {
                     return Err(());
@@ -164,20 +170,24 @@ impl State {
         let mut ptr1 = 0;
 
         let inf = Separator::new(usize::MAX, i32::MAX);
+        let mut line0 = lines0[ptr0];
+        let mut line1 = lines1[ptr1];
+        let n = lines0.len();
 
-        while ptr0 < lines0.len() || ptr1 < lines1.len() {
-            let line0 = lines0.get(ptr0).copied().unwrap_or(inf);
-            let line1 = lines1.get(ptr1).copied().unwrap_or(inf);
-
+        while ptr0 < n || ptr1 < n {
             if line0 == line1 {
                 ptr0 += 1;
                 ptr1 += 1;
+                line0 = lines0.get(ptr0).copied().unwrap_or(inf);
+                line1 = lines1.get(ptr1).copied().unwrap_or(inf);
             } else if line0 < line1 {
                 score += env.widths[line0.index];
                 ptr0 += 1;
+                line0 = lines0.get(ptr0).copied().unwrap_or(inf);
             } else {
                 score += env.widths[line1.index];
                 ptr1 += 1;
+                line1 = lines1.get(ptr1).copied().unwrap_or(inf);
             }
         }
 
@@ -219,15 +229,37 @@ impl State {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Hash)]
 struct Separator {
     index: usize,
     y: i32,
+    v: u64,
 }
 
 impl Separator {
     fn new(index: usize, y: i32) -> Self {
-        Self { index, y }
+        let v = (index as u64) << 32 | (y + (1 << 16)) as u64;
+        Self { index, y, v }
+    }
+}
+
+impl PartialEq for Separator {
+    fn eq(&self, other: &Self) -> bool {
+        self.v == other.v
+    }
+}
+
+impl Eq for Separator {}
+
+impl PartialOrd for Separator {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.v.partial_cmp(&other.v)
+    }
+}
+
+impl Ord for Separator {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.v.cmp(&other.v)
     }
 }
 
@@ -280,7 +312,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
             let new_lines = &mut new_line_buffer;
             new_lines.copy_from_slice(&state.lines[day]);
-            new_lines[index].y = new_y;
+            new_lines[index] = Separator::new(state.lines[day][index].index, new_y);
             new_lines
         } else if neigh_type == 1 {
             let new_index = rng.gen_range(0..env.widths.len());
