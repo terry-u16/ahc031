@@ -57,6 +57,8 @@ impl<'a> Env<'a> {
     }
 }
 
+static mut AREA_BUF: Vec<i32> = vec![];
+
 #[derive(Debug, Clone)]
 struct State {
     lines: Vec<Vec<Separator>>,
@@ -104,27 +106,11 @@ impl State {
         Ok(score)
     }
 
-    fn calc_day_score(&self, env: &Env, day: usize, threshold: i64) -> Result<i64, ()> {
-        let mut score = 0;
-        score += self.calc_line_score(env, day);
-
-        if score > threshold {
-            return Err(());
-        }
-
-        score += self.calc_line_score(env, day + 1);
-
-        if score > threshold {
-            return Err(());
-        }
-
-        score += self.calc_area_score(env, day)?;
-
-        Ok(score)
-    }
-
     fn calc_area_score(&self, env: &Env, day: usize) -> Result<i64, ()> {
-        let mut areas = Vec::with_capacity(env.input.n);
+        let areas = unsafe {
+            AREA_BUF.clear();
+            &mut AREA_BUF
+        };
         let lines = &self.lines[day];
 
         let mut pointer = 0;
@@ -159,10 +145,10 @@ impl State {
 
         for (&req, &area) in env.input.requests[day].iter().zip(areas.iter()) {
             let diff = (req - area) as i64;
-            score += diff.max(0) * 100;
+            score += diff.max(0);
         }
 
-        Ok(score)
+        Ok(score * 100)
     }
 
     fn calc_line_score(&self, env: &Env, day: usize) -> i64 {
@@ -263,6 +249,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let temp0 = 1e2;
     let temp1 = 1e0;
     let mut temp = temp0;
+    let mut new_line_buffer = state.lines[0].clone();
 
     loop {
         all_iter += 1;
@@ -278,10 +265,9 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         // 変形
         let neigh_type = rng.gen_range(0..3);
         let day = rng.gen_range(0..env.input.days);
+        let index = rng.gen_range(0..state.lines[day].len());
 
         let mut new_lines = if neigh_type == 0 {
-            let index = rng.gen_range(0..state.lines[day].len());
-
             let new_y = loop {
                 let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
                 let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
@@ -292,14 +278,15 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
                 }
             };
 
-            let mut new_lines = state.lines[day].clone();
+            let new_lines = &mut new_line_buffer;
+            new_lines.copy_from_slice(&state.lines[day]);
             new_lines[index].y = new_y;
             new_lines
         } else if neigh_type == 1 {
-            let index = rng.gen_range(0..state.lines[day].len());
             let new_index = rng.gen_range(0..env.widths.len());
             let new_y = rng.gen_range(1..Input::W);
-            let mut new_lines = state.lines[day].clone();
+            let new_lines = &mut new_line_buffer;
+            new_lines.copy_from_slice(&state.lines[day]);
             new_lines[index] = Separator::new(new_index, new_y);
             new_lines
         } else {
@@ -310,13 +297,15 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             };
 
             let i0 = rng.gen_range(0..target_lines.len());
-            let i1 = rng.gen_range(0..state.lines[day].len());
-            let mut new_lines = state.lines[day].clone();
-            new_lines[i1] = target_lines[i0];
+            let new_lines = &mut new_line_buffer;
+            new_lines.copy_from_slice(&state.lines[day]);
+            new_lines[index] = target_lines[i0];
             new_lines
         };
 
-        new_lines.sort_unstable();
+        let line = new_lines.remove(index);
+        let index = new_lines.binary_search(&line).unwrap_or_else(|i| i);
+        new_lines.insert(index, line);
 
         // スコア計算
         // 先に閾値を求めることで評価を高速化する
