@@ -6,8 +6,8 @@ use crate::{
     problem::{Input, Rect},
 };
 
-pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<Rect>>, i64) {
-    let each_duration = duration / input.days as f64;
+pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
+    let each_duration = (2.9 - input.since.elapsed().as_secs_f64()) / input.days as f64;
     let trial_count = (3000 / (input.days * input.n)).max(5);
     let max_beam_width = trial_count / 2;
 
@@ -60,7 +60,6 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<R
     }
 
     let best_state = &beam[0];
-    let score = best_state.score;
     let mut rects = vec![];
 
     for s in best_state.states.iter() {
@@ -68,7 +67,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<R
         rects.push(s.to_rects(&env));
     }
 
-    (rects, score)
+    rects
 }
 
 #[derive(Debug, Clone)]
