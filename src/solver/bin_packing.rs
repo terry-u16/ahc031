@@ -22,7 +22,7 @@ impl Solver for BinPacking1d {
         let (dividers, div_size) = step1::get_best_width(input);
 
         if div_size >= 3 {
-            let duration = self.duration - since.elapsed().as_secs_f64();
+            let duration = (self.duration - since.elapsed().as_secs_f64()).max(0.01);
             step2::divide(input, &dividers, duration)
         } else {
             (vec![], i64::MAX)

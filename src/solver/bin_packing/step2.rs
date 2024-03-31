@@ -10,7 +10,7 @@ use crate::{
 
 pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<Rect>>, i64) {
     let since = Instant::now();
-    let trial_count = (3000 / (input.days * input.n)).max(5);
+    let trial_count = (3000 / (input.days * input.n)).max(3);
     let max_beam_width = trial_count / 2;
 
     let separator_count = input.n - (dividers[0].len() - 1);
@@ -28,7 +28,8 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<R
 
     for day in 0..input.days {
         let mut next_beam = vec![];
-        let each_duration = (duration - since.elapsed().as_secs_f64()) / (input.days - day) as f64;
+        let each_duration =
+            ((duration - since.elapsed().as_secs_f64()) / (input.days - day) as f64).max(0.0);
 
         for i in 0..trial_count {
             let beam_state = &beam[i % beam.len()];
@@ -274,6 +275,10 @@ impl Separator {
 }
 
 fn annealing(env: &Env, mut state: State, duration: f64) -> State {
+    if duration <= 0.0 {
+        return state;
+    }
+
     let mut current_score = state.calc_score(&env).unwrap();
     let mut best_solution = state.clone();
     let mut best_score = current_score;
