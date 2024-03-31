@@ -121,7 +121,7 @@ impl State {
             while pointer < lines.len() {
                 let line = &lines[pointer];
 
-                if line.index != i {
+                if line.index() != i {
                     break;
                 }
 
@@ -178,16 +178,32 @@ impl State {
             if line0 == line1 {
                 ptr0 += 1;
                 ptr1 += 1;
-                line0 = lines0.get(ptr0).copied().unwrap_or(inf);
-                line1 = lines1.get(ptr1).copied().unwrap_or(inf);
+                line0 = if ptr0 < lines0.len() {
+                    lines0[ptr0]
+                } else {
+                    inf
+                };
+                line1 = if ptr1 < lines1.len() {
+                    lines1[ptr1]
+                } else {
+                    inf
+                };
             } else if line0 < line1 {
-                score += env.widths[line0.index];
+                score += env.widths[line0.index()];
                 ptr0 += 1;
-                line0 = lines0.get(ptr0).copied().unwrap_or(inf);
+                line0 = if ptr0 < lines0.len() {
+                    lines0[ptr0]
+                } else {
+                    inf
+                };
             } else {
-                score += env.widths[line1.index];
+                score += env.widths[line1.index()];
                 ptr1 += 1;
-                line1 = lines1.get(ptr1).copied().unwrap_or(inf);
+                line1 = if ptr1 < lines1.len() {
+                    lines1[ptr1]
+                } else {
+                    inf
+                };
             }
         }
 
@@ -205,7 +221,7 @@ impl State {
             for (i, (&x0, &x1)) in env.dividers.iter().tuple_windows().enumerate() {
                 let mut y = 0;
 
-                while pointer < lines.len() && lines[pointer].index == i {
+                while pointer < lines.len() && lines[pointer].index() == i {
                     let rect = Rect::new(x0, y, x1, lines[pointer].y);
                     y = lines[pointer].y;
 
@@ -231,7 +247,7 @@ impl State {
 
 #[derive(Debug, Clone, Copy, Hash)]
 struct Separator {
-    index: usize,
+    index: u32,
     y: i32,
     v: u64,
 }
@@ -239,7 +255,15 @@ struct Separator {
 impl Separator {
     fn new(index: usize, y: i32) -> Self {
         let v = (index as u64) << 32 | (y + (1 << 16)) as u64;
-        Self { index, y, v }
+        Self {
+            index: index as u32,
+            y,
+            v,
+        }
+    }
+
+    fn index(&self) -> usize {
+        self.index as usize
     }
 }
 
@@ -295,7 +319,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..3);
+        let neigh_type = rng.gen_range(0..4);
         let day = rng.gen_range(0..env.input.days);
         let index = rng.gen_range(0..state.lines[day].len());
 
@@ -312,7 +336,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
             let new_lines = &mut new_line_buffer;
             new_lines.copy_from_slice(&state.lines[day]);
-            new_lines[index] = Separator::new(state.lines[day][index].index, new_y);
+            new_lines[index] = Separator::new(state.lines[day][index].index(), new_y);
             new_lines
         } else if neigh_type == 1 {
             let new_index = rng.gen_range(0..env.widths.len());
