@@ -1,4 +1,7 @@
-use crate::{common::ChangeMinMax as _, problem::Input};
+use crate::{
+    common::{ChangeMinMax as _, DIVISOR},
+    problem::Input,
+};
 use rand::prelude::*;
 
 pub fn generate_init_solution(input: &Input, duration: f64) -> (Vec<i32>, Vec<Vec<(usize, i32)>>) {
@@ -27,7 +30,7 @@ impl State {
 
     fn calc_score(&self, input: &Input) -> i64 {
         let mut widths = self.widths.clone();
-        widths.sort();
+        widths.sort_unstable();
 
         let mut y_lanes = vec![0; widths.len()];
 
@@ -49,7 +52,7 @@ impl State {
                 // first-fitをする
                 if self.directions[rect_j] {
                     for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate().rev() {
-                        let dy = (request + width - 1) / width;
+                        let dy = DIVISOR.div((request + width - 1) as u32, width as u32) as i32;
                         let y = y + dy;
 
                         if next_y.change_min(y) {
@@ -62,7 +65,7 @@ impl State {
                     }
                 } else {
                     for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
-                        let dy = (request + width - 1) / width;
+                        let dy = DIVISOR.div((request + width - 1) as u32, width as u32) as i32;
                         let y = y + dy;
 
                         if next_y.change_min(y) {
@@ -133,7 +136,7 @@ impl State {
                 // first-fitをする
                 if self.directions[rect_j] {
                     for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate().rev() {
-                        let dy = (request + width - 1) / width;
+                        let dy = DIVISOR.div((request + width - 1) as u32, width as u32) as i32;
                         let y = y + dy;
 
                         if next_y.change_min(y) {
@@ -146,7 +149,7 @@ impl State {
                     }
                 } else {
                     for (i, (&width, &y)) in widths.iter().zip(y_lanes.iter()).enumerate() {
-                        let dy = (request + width - 1) / width;
+                        let dy = DIVISOR.div((request + width - 1) as u32, width as u32) as i32;
                         let y = y + dy;
 
                         if next_y.change_min(y) {
@@ -299,6 +302,8 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
             }
         }
     }
+
+    eprintln!("all iter: {}", all_iter);
 
     best_state
 }
