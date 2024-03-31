@@ -18,21 +18,22 @@ pub fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
     let init_state = State::new(lines);
     let env = Env::new(&input, dividers, 0, None);
 
-    let mut beam = vec![BeamState::new(&env, vec![init_state])];
+    let mut beam = vec![BeamState::new(&env, vec![], 0)];
 
     for day in 0..input.days {
         let mut next_beam = vec![];
 
         for i in 0..trial_count {
-            let mut states = beam[i % beam.len()].states.clone();
-            let state = states.last().unwrap().clone();
+            let beam_state = &beam[i % beam.len()];
+            let mut states = beam_state.states.clone();
+            let state = states.last().unwrap_or_else(|| &init_state).clone();
             let env = Env::new(&input, dividers, day, Some(state.clone()));
 
             let duration = each_duration / trial_count as f64;
             let state = annealing(&env, state.clone(), duration);
             states.push(state);
 
-            next_beam.push(BeamState::new(&env, states));
+            next_beam.push(BeamState::new(&env, states, beam_state.score));
         }
 
         next_beam.sort_unstable_by_key(|s| s.score);
@@ -44,8 +45,7 @@ pub fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
         beam = next_beam;
     }
 
-    let best_state = &mut beam[0];
-    best_state.states.remove(0);
+    let best_state = &beam[0];
     let mut rects = vec![];
 
     for s in best_state.states.iter() {
@@ -62,8 +62,12 @@ struct BeamState {
 }
 
 impl BeamState {
-    fn new(env: &Env, mut states: Vec<State>) -> Self {
-        let score = states.last_mut().unwrap().calc_score(&env).unwrap();
+    fn new(env: &Env, mut states: Vec<State>, prev_score: i64) -> Self {
+        let score = states
+            .last_mut()
+            .map(|s| s.calc_score(env).unwrap())
+            .unwrap_or(0)
+            + prev_score;
         Self { states, score }
     }
 }
