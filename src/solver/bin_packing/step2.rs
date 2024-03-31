@@ -19,79 +19,92 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<R
         .collect_vec();
     let init_state = State::new(lines);
 
-    let mut beam = vec![];
+    let mut beam = vec![vec![]; input.days + 1];
 
     for (i, dividers) in dividers.iter().enumerate() {
         let env = Env::new(&input, dividers, 0, None);
-        beam.push(BeamState::new(&env, vec![], 1, i));
+        beam[0].push(BeamState::new(&env, None, 1, i, !0));
     }
 
     for day in 0..input.days {
-        let mut next_beam = vec![];
         let each_duration =
             ((duration - since.elapsed().as_secs_f64()) / (input.days - day) as f64).max(0.0);
 
         for i in 0..trial_count {
-            let beam_state = &beam[i % beam.len()];
-            let mut states = beam_state.states.clone();
-            let state = states.last().unwrap_or_else(|| &init_state).clone();
-            let env = Env::new(
-                &input,
-                &dividers[beam_state.divider_index],
-                day,
-                states.last().cloned(),
-            );
+            let beam_index = i % beam[day].len();
+            let beam_state = &beam[day][beam_index];
+            let prev_state = beam_state.state.clone();
+            let prev_score = beam_state.score;
+            let divider_index = beam_state.divider_index;
+            let state = prev_state.clone().unwrap_or_else(|| init_state.clone());
+            let env = Env::new(&input, &dividers[beam_state.divider_index], day, prev_state);
 
             let duration = each_duration / trial_count as f64;
             let state = annealing(&env, state.clone(), duration);
-            states.push(state);
 
-            next_beam.push(BeamState::new(
+            beam[day + 1].push(BeamState::new(
                 &env,
-                states,
-                beam_state.score,
-                beam_state.divider_index,
+                Some(state),
+                prev_score,
+                divider_index,
+                beam_index,
             ));
         }
 
-        next_beam.sort_unstable_by_key(|s| s.score);
+        beam[day + 1].sort_unstable_by_key(|s| s.score);
 
-        if next_beam.len() > max_beam_width {
-            next_beam.truncate(max_beam_width);
+        if beam[day + 1].len() > max_beam_width {
+            beam[day + 1].truncate(max_beam_width);
         }
-
-        beam = next_beam;
     }
 
-    let best_state = &beam[0];
+    let best_state = &beam[input.days][0];
     let mut rects = vec![];
+    let mut day = input.days;
+    let mut index = 0;
 
-    for s in best_state.states.iter() {
-        let env = Env::new(&input, &dividers[best_state.divider_index], 0, None);
-        rects.push(s.to_rects(&env));
+    while day > 0 {
+        let state = &beam[day][index];
+        let prev_day = day - 1;
+        let prev_index = state.prev_state_index;
+        let prev_state = beam[prev_day][prev_index].state.clone();
+        let env = Env::new(&input, &dividers[state.divider_index], day - 1, prev_state);
+        rects.push(state.state.as_ref().unwrap().to_rects(&env));
+        day = prev_day;
+        index = prev_index;
     }
+
+    rects.reverse();
 
     (rects, best_state.score)
 }
 
 #[derive(Debug, Clone)]
 struct BeamState {
-    states: Vec<State>,
+    state: Option<State>,
     divider_index: usize,
     score: i64,
+    prev_state_index: usize,
 }
 
 impl BeamState {
-    fn new(env: &Env, mut states: Vec<State>, prev_score: i64, divider_index: usize) -> Self {
-        let score = states
-            .last_mut()
+    fn new(
+        env: &Env,
+        mut state: Option<State>,
+        prev_score: i64,
+        divider_index: usize,
+        prev_state_index: usize,
+    ) -> Self {
+        let score = state
+            .as_mut()
             .map(|s| s.calc_score(env).unwrap())
             .unwrap_or(0)
             + prev_score;
         Self {
-            states,
+            state,
             score,
             divider_index,
+            prev_state_index,
         }
     }
 }
