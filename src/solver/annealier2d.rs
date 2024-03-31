@@ -13,7 +13,7 @@ impl Solver for Annealer2d {
         let (coords, indices) = build_squares(&sizes);
         let env = Env::new(input.clone(), indices.clone());
         let state = State::new(vec![coords; input.days]);
-        let state = annealing(&env, state, 2.9);
+        let state = annealing(&env, state, 2.95);
 
         eprintln!("{}", state.calc_score(&env).unwrap());
 

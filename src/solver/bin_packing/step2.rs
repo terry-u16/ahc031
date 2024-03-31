@@ -7,7 +7,6 @@ use crate::{
 };
 
 pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
-    let each_duration = (2.9 - input.since.elapsed().as_secs_f64()) / input.days as f64;
     let trial_count = (3000 / (input.days * input.n)).max(5);
     let max_beam_width = trial_count / 2;
 
@@ -26,6 +25,8 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
 
     for day in 0..input.days {
         let mut next_beam = vec![];
+        let each_duration =
+            (2.95 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
 
         for i in 0..trial_count {
             let beam_state = &beam[i % beam.len()];
@@ -146,12 +147,12 @@ struct State {
 
 impl State {
     fn new(mut lines: Vec<Separator>) -> Self {
-        glidesort::sort(&mut lines);
+        lines.sort_unstable();
         Self { lines }
     }
 
     fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
-        glidesort::sort(&mut self.lines);
+        self.lines.sort_unstable();
         let mut score = self.calc_area_score(env)?;
 
         if let Some(prev_state) = &env.prev_state {
@@ -189,7 +190,7 @@ impl State {
             areas.push(area);
         }
 
-        glidesort::sort(&mut areas);
+        areas.sort_unstable();
 
         let mut score = 0;
 
