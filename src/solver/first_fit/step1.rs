@@ -88,7 +88,7 @@ impl State {
             }
 
             // 1つ以上入れないとダメ
-            score += y_lanes.iter().filter(|&&y| y == 0).count() as i64 * 100;
+            score += y_lanes.iter().filter(|&&y| y == 0).count() as i64 * 1000;
         }
 
         score
