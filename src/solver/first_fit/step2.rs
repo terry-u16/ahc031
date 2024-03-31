@@ -288,14 +288,10 @@ impl Ord for Separator {
 
 fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let mut current_score = state.calc_score(&env).unwrap_or(INF);
-    let init_score = current_score;
     let mut best_solution = state.clone();
     let mut best_score = current_score;
 
     let mut all_iter = 0;
-    let mut valid_iter = 0;
-    let mut accepted_count = 0;
-    let mut update_count = 0;
     let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
 
     let duration_inv = 1.0 / duration;
@@ -395,30 +391,17 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         if new_score as f64 <= score_threshold {
             // 解の更新
             current_score += score_diff;
-            accepted_count += 1;
             state.area_scores[day] = area_score;
             state.line_scores[day] = prev_line_score;
             state.line_scores[day + 1] = next_line_score;
 
             if best_score.change_min(current_score) {
                 best_solution = state.clone();
-                update_count += 1;
             }
         } else {
             std::mem::swap(&mut state.lines[day], &mut new_lines);
         }
-
-        valid_iter += 1;
     }
-
-    eprintln!("===== annealing =====");
-    eprintln!("init score : {}", init_score);
-    eprintln!("score      : {}", best_score);
-    eprintln!("all iter   : {}", all_iter);
-    eprintln!("valid iter : {}", valid_iter);
-    eprintln!("accepted   : {}", accepted_count);
-    eprintln!("updated    : {}", update_count);
-    eprintln!("");
 
     best_solution
 }

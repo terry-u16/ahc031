@@ -18,7 +18,7 @@ fn main() {
 
     eprintln!("first_fit score: {}", best_score);
 
-    let duration = 2.98 - input.since.elapsed().as_secs_f64();
+    let duration = 2.97 - input.since.elapsed().as_secs_f64();
     let bin_packing = BinPacking1d::new(duration);
     let (result, score) = bin_packing.solve(&input);
 
@@ -28,7 +28,7 @@ fn main() {
         best_result = result;
     }
 
-    let duration = 2.98 - input.since.elapsed().as_secs_f64();
+    let duration = 2.97 - input.since.elapsed().as_secs_f64();
 
     if duration > 0.1 {
         let annealer2d = Annealer2d::new(duration);

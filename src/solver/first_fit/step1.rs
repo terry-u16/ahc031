@@ -196,12 +196,8 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
     let mut best_state = state.clone();
     let mut current_score = state.calc_score(input);
     let mut best_score = current_score;
-    let init_score = current_score;
 
     let mut all_iter = 0;
-    let mut valid_iter = 0;
-    let mut accepted_count = 0;
-    let mut update_count = 0;
     let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
 
     let duration_inv = 1.0 / duration;
@@ -296,26 +292,13 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
         if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
             // 解の更新
             current_score = new_score;
-            accepted_count += 1;
             state = new_state;
 
             if best_score.change_min(current_score) {
                 best_state = state.clone();
-                update_count += 1;
             }
         }
-
-        valid_iter += 1;
     }
-
-    eprintln!("===== annealing =====");
-    eprintln!("init score : {}", init_score);
-    eprintln!("score      : {}", best_score);
-    eprintln!("all iter   : {}", all_iter);
-    eprintln!("valid iter : {}", valid_iter);
-    eprintln!("accepted   : {}", accepted_count);
-    eprintln!("updated    : {}", update_count);
-    eprintln!("");
 
     best_state
 }

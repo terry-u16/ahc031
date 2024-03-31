@@ -4,24 +4,12 @@ use rand::{Rng as _, SeedableRng as _};
 use crate::{common::ChangeMinMax as _, problem::Input};
 
 pub fn get_best_width(input: &Input) -> (Vec<Vec<i32>>, usize) {
-    let sum_reqs = input
-        .requests
-        .iter()
-        .map(|reqs| reqs.iter().map(|&r| r as i64).sum::<i64>())
-        .sum::<i64>();
-    let average = sum_reqs as f64 / input.days as f64 / (Input::W * Input::W) as f64 * 100.0;
-    eprintln!(
-        "D = {}, N = {}, average: {:.2}%",
-        input.days, input.n, average
-    );
-
     let mut dividers = vec![0, Input::W];
     let mut div_size = 1;
 
     for div in 2..input.n {
         let state = gen_dividers(input, div);
         let score = state.calc_score(input).unwrap();
-        eprintln!("[Div {}] score: {}, {:?}", div, score, state.widths);
 
         if score > 0 {
             break;
