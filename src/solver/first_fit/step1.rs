@@ -175,14 +175,24 @@ impl State {
 
             for i in 0..widths.len() {
                 let mut y = 0;
+                let mut local_separators = vec![];
 
                 for &dy in lane_rects[i].iter() {
                     y += dy;
-                    separators.push((i, y));
+                    local_separators.push(y);
                 }
 
-                if !lane_rects[i].is_empty() {
-                    separators.pop();
+                if let Some(&last) = local_separators.last() {
+                    for y in local_separators.iter_mut() {
+                        *y *= Input::W;
+                        *y /= last;
+                    }
+
+                    local_separators.pop();
+
+                    for &y in local_separators.iter() {
+                        separators.push((i, y));
+                    }
                 }
             }
 
