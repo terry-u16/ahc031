@@ -25,31 +25,83 @@ impl Solver for BreakAndBestFit {
 
 fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
     let mut rng = Pcg64Mcg::from_entropy();
-    let mut prev_state = None;
-    let mut rects = vec![];
+    let mut beam = vec![BeamState::new(vec![], 1)];
 
     for day in 0..input.days {
-        let env = Env::new(input, dividers, day, prev_state.clone());
-        let mut best_state = State::new(vec![]);
-        let mut best_score = i64::MAX;
+        let mut next_beam = vec![];
 
         for _ in 0..10000 {
-            let state = prev_state.clone().unwrap_or_else(|| State::new(vec![]));
-            let mut state = state.gen_next(&env, &mut rng);
+            let beam_state = beam.choose(&mut rng).unwrap();
+            let prev_state = beam_state.state.last().cloned();
+            let env = Env::new(input, dividers, day, prev_state.clone());
+            let mut state = prev_state
+                .unwrap_or_else(|| State::new(vec![]))
+                .gen_next(&env, &mut rng);
+            let Ok(score) = state.calc_score(&env) else {
+                continue;
+            };
 
-            let score = state.calc_score(&env).unwrap();
-
-            if best_score.change_min(score) {
-                best_state = state;
-                eprintln!("[day {}] {}", day, score);
-            }
+            let mut states = beam_state.state.clone();
+            states.push(state);
+            let new_beam_state = BeamState::new(states, beam_state.score + score);
+            next_beam.push(new_beam_state);
         }
 
-        rects.push(best_state.to_rects(&env));
-        prev_state = Some(best_state);
+        next_beam.sort_unstable();
+
+        if next_beam.len() > 10 {
+            next_beam.truncate(10);
+        }
+
+        let scores = next_beam.iter().map(|s| s.score).collect_vec();
+        eprintln!("day: {}, scores: {:?}", day, scores);
+
+        beam = next_beam;
+    }
+
+    let best_state = beam.into_iter().min_by_key(|s| s.score).unwrap();
+    eprintln!("score: {}", best_state.score);
+
+    let mut rects = vec![];
+
+    for (day, state) in best_state.state.iter().enumerate() {
+        let env = Env::new(input, dividers, day, None);
+        rects.push(state.to_rects(&env));
     }
 
     rects
+}
+
+#[derive(Debug, Clone)]
+struct BeamState {
+    state: Vec<State>,
+    score: i64,
+}
+
+impl BeamState {
+    fn new(state: Vec<State>, score: i64) -> Self {
+        Self { state, score }
+    }
+}
+
+impl PartialEq for BeamState {
+    fn eq(&self, other: &Self) -> bool {
+        self.score == other.score
+    }
+}
+
+impl Eq for BeamState {}
+
+impl PartialOrd for BeamState {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.score.partial_cmp(&other.score)
+    }
+}
+
+impl Ord for BeamState {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.score.cmp(&other.score)
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
 pub mod annealier2d;
 pub mod bin_packing;
-pub mod first_fit;
 pub mod break_and_best_fit;
+pub mod first_fit;
 
 use std::{fmt::Display, time::Instant};
 
@@ -12,6 +12,7 @@ pub struct Input {
     pub days: usize,
     pub n: usize,
     pub requests: Vec<Vec<i32>>,
+    pub packing_ratio: f64,
     pub since: Instant,
 }
 
@@ -26,24 +27,21 @@ impl Input {
             requests: [[i32; n]; days],
         }
 
+        let mut packing_ratio = requests
+            .iter()
+            .map(|reqs| reqs.iter().sum::<i32>() as f64)
+            .sum::<f64>();
+        packing_ratio /= days as f64 * Self::W as f64 * Self::W as f64;
+
         let since = Instant::now();
 
         Self {
             days,
             n,
             requests,
+            packing_ratio,
             since,
         }
-    }
-
-    pub fn packing_ratio(&self) -> f64 {
-        let mut sum = self
-            .requests
-            .iter()
-            .map(|reqs| reqs.iter().sum::<i32>() as f64)
-            .sum::<f64>();
-        sum /= self.days as f64 * Self::W as f64 * Self::W as f64;
-        sum
     }
 }
 
