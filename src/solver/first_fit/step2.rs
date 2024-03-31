@@ -6,6 +6,8 @@ use crate::{
     problem::{Input, Rect},
 };
 
+const INF: i64 = 1 << 50;
+
 pub fn devide(
     input: &Input,
     dividers: &[i32],
@@ -22,15 +24,12 @@ pub fn devide(
         })
         .collect_vec();
     eprintln!("{:?}", separators);
-    let mut state = State::new(separators);
-    eprintln!(
-        "init score: {:?}",
-        state.calc_score(&env).unwrap_or(i64::MAX / 2)
-    );
+    let mut state = State::new(separators, &env);
+    eprintln!("init score: {:?}", state.calc_score(&env).unwrap_or(INF));
 
     let duration = 1.35;
     let mut state = annealing(&env, state, duration);
-    let score = state.calc_score(&env).unwrap_or(i64::MAX / 2);
+    let score = state.calc_score(&env).unwrap_or(INF);
 
     (state.to_rects(&env), score)
 }
@@ -61,15 +60,33 @@ impl<'a> Env<'a> {
 #[derive(Debug, Clone)]
 struct State {
     lines: Vec<Vec<Separator>>,
+    area_scores: Vec<i64>,
+    line_scores: Vec<i64>,
 }
 
 impl State {
-    fn new(mut lines: Vec<Vec<Separator>>) -> Self {
+    fn new(mut lines: Vec<Vec<Separator>>, env: &Env) -> Self {
         for lines in lines.iter_mut() {
             glidesort::sort(lines);
         }
 
-        Self { lines }
+        let mut state = Self {
+            lines,
+            area_scores: vec![],
+            line_scores: vec![],
+        };
+
+        for day in 0..env.input.days {
+            let s = state.calc_area_score(env, day).unwrap_or(INF);
+            state.area_scores.push(s);
+        }
+
+        for day in 0..env.input.days + 1 {
+            let s = state.calc_line_score(env, day);
+            state.line_scores.push(s);
+        }
+
+        state
     }
 
     fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
@@ -87,11 +104,21 @@ impl State {
         Ok(score)
     }
 
-    fn calc_day_score(&mut self, env: &Env, day: usize) -> Result<i64, ()> {
+    fn calc_day_score(&self, env: &Env, day: usize, threshold: i64) -> Result<i64, ()> {
         let mut score = 0;
-        score += self.calc_area_score(env, day)?;
         score += self.calc_line_score(env, day);
+
+        if score > threshold {
+            return Err(());
+        }
+
         score += self.calc_line_score(env, day + 1);
+
+        if score > threshold {
+            return Err(());
+        }
+
+        score += self.calc_area_score(env, day)?;
 
         Ok(score)
     }
@@ -219,7 +246,7 @@ impl Separator {
 }
 
 fn annealing(env: &Env, mut state: State, duration: f64) -> State {
-    let mut current_score = state.calc_score(&env).unwrap_or(i64::MAX / 2);
+    let mut current_score = state.calc_score(&env).unwrap_or(INF);
     let init_score = current_score;
     let mut best_solution = state.clone();
     let mut best_score = current_score;
@@ -235,14 +262,13 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
     let temp0 = 1e2;
     let temp1 = 1e0;
-    let mut inv_temp = 1.0 / temp0;
+    let mut temp = temp0;
 
     loop {
         all_iter += 1;
         if (all_iter & ((1 << 4) - 1)) == 0 {
             let time = (std::time::Instant::now() - since).as_secs_f64() * duration_inv;
-            let temp = f64::powf(temp0, 1.0 - time) * f64::powf(temp1, time);
-            inv_temp = 1.0 / temp;
+            temp = f64::powf(temp0, 1.0 - time) * f64::powf(temp1, time);
 
             if time >= 1.0 {
                 break;
@@ -353,20 +379,42 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         new_lines.sort_unstable();
 
         // スコア計算
-        let old_score = state.calc_day_score(env, day).unwrap_or(i64::MAX / 2);
+        // 先に閾値を求めることで評価を高速化する
+        let old_score =
+            state.area_scores[day] + state.line_scores[day] + state.line_scores[day + 1];
+        let score_threshold = old_score - (temp * rng.gen_range(0.0f64..1.0).ln()).round() as i64;
 
         std::mem::swap(&mut state.lines[day], &mut new_lines);
 
-        let Ok(new_score) = state.calc_day_score(&env, day) else {
+        let prev_line_score = state.calc_line_score(env, day);
+
+        if prev_line_score > score_threshold {
+            std::mem::swap(&mut state.lines[day], &mut new_lines);
+            continue;
+        }
+
+        let next_line_score = state.calc_line_score(env, day + 1);
+
+        if prev_line_score + next_line_score > score_threshold {
+            std::mem::swap(&mut state.lines[day], &mut new_lines);
+            continue;
+        }
+
+        let Ok(area_score) = state.calc_area_score(&env, day) else {
             std::mem::swap(&mut state.lines[day], &mut new_lines);
             continue;
         };
+
+        let new_score = area_score + prev_line_score + next_line_score;
         let score_diff = new_score - old_score;
 
-        if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
+        if new_score <= score_threshold {
             // 解の更新
             current_score += score_diff;
             accepted_count += 1;
+            state.area_scores[day] = area_score;
+            state.line_scores[day] = prev_line_score;
+            state.line_scores[day + 1] = next_line_score;
 
             if best_score.change_min(current_score) {
                 best_solution = state.clone();
