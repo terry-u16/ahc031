@@ -382,20 +382,20 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         // 先に閾値を求めることで評価を高速化する
         let old_score =
             state.area_scores[day] + state.line_scores[day] + state.line_scores[day + 1];
-        let score_threshold = old_score - (temp * rng.gen_range(0.0f64..1.0).ln()).round() as i64;
+        let score_threshold = old_score as f64 - temp * rng.gen_range(0.0f64..1.0).ln();
 
         std::mem::swap(&mut state.lines[day], &mut new_lines);
 
         let prev_line_score = state.calc_line_score(env, day);
 
-        if prev_line_score > score_threshold {
+        if prev_line_score as f64 > score_threshold {
             std::mem::swap(&mut state.lines[day], &mut new_lines);
             continue;
         }
 
         let next_line_score = state.calc_line_score(env, day + 1);
 
-        if prev_line_score + next_line_score > score_threshold {
+        if (prev_line_score + next_line_score) as f64 > score_threshold {
             std::mem::swap(&mut state.lines[day], &mut new_lines);
             continue;
         }
@@ -408,7 +408,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         let new_score = area_score + prev_line_score + next_line_score;
         let score_diff = new_score - old_score;
 
-        if new_score <= score_threshold {
+        if new_score as f64 <= score_threshold {
             // 解の更新
             current_score += score_diff;
             accepted_count += 1;
