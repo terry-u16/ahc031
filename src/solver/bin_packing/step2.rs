@@ -152,7 +152,6 @@ impl State {
     }
 
     fn calc_score(&mut self, env: &Env) -> Result<i64, ()> {
-        self.lines.sort_unstable();
         let mut score = self.calc_area_score(env)?;
 
         if let Some(prev_state) = &env.prev_state {
@@ -303,18 +302,44 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         let neigh_type = rng.gen_range(0..10);
 
         let mut new_state = if neigh_type < 5 {
-            let index = rng.gen_range(0..state.lines.len());
+            let mut index = rng.gen_range(0..state.lines.len());
             let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
             let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
             let mut new_state = state.clone();
             new_state.lines[index].y += dy;
+
+            while index > 0 && new_state.lines[index] < new_state.lines[index - 1] {
+                new_state.lines.swap(index, index - 1);
+                index -= 1;
+            }
+
+            while index + 1 < new_state.lines.len()
+                && new_state.lines[index] > new_state.lines[index + 1]
+            {
+                new_state.lines.swap(index, index + 1);
+                index += 1;
+            }
+
             new_state
         } else if neigh_type < 7 {
-            let index = rng.gen_range(0..state.lines.len());
+            let mut index = rng.gen_range(0..state.lines.len());
             let new_index = rng.gen_range(0..env.widths.len());
             let new_y = rng.gen_range(1..Input::W);
             let mut new_state = state.clone();
             new_state.lines[index] = Separator::new(new_index, new_y);
+
+            while index > 0 && new_state.lines[index] < new_state.lines[index - 1] {
+                new_state.lines.swap(index, index - 1);
+                index -= 1;
+            }
+
+            while index + 1 < new_state.lines.len()
+                && new_state.lines[index] > new_state.lines[index + 1]
+            {
+                new_state.lines.swap(index, index + 1);
+                index += 1;
+            }
+
             new_state
         } else if neigh_type == 7 {
             let Some(prev_state) = &env.prev_state else {
@@ -325,6 +350,21 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let i1 = rng.gen_range(0..state.lines.len());
             let mut new_state = state.clone();
             new_state.lines[i1] = prev_state.lines[i0];
+
+            let mut index = i1;
+
+            while index > 0 && new_state.lines[index] < new_state.lines[index - 1] {
+                new_state.lines.swap(index, index - 1);
+                index -= 1;
+            }
+
+            while index + 1 < new_state.lines.len()
+                && new_state.lines[index] > new_state.lines[index + 1]
+            {
+                new_state.lines.swap(index, index + 1);
+                index += 1;
+            }
+
             new_state
         } else if neigh_type == 8 {
             let index0 = rng.gen_range(0..env.widths.len());
@@ -355,6 +395,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
                 *sep = new_sep;
             }
+            new_state.lines.sort_unstable();
 
             new_state
         } else {
@@ -394,6 +435,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
                 y += dy;
                 new_state.lines[j].y = y;
             }
+
+            new_state.lines.sort_unstable();
 
             new_state
         };
