@@ -276,15 +276,24 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..5);
+        let neigh_type = rng.gen_range(0..3);
         let day = rng.gen_range(0..env.input.days);
 
         let mut new_lines = if neigh_type == 0 {
             let index = rng.gen_range(0..state.lines[day].len());
-            let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
-            let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
+
+            let new_y = loop {
+                let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
+                let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
+                let new_y = state.lines[day][index].y + dy;
+
+                if 0 < new_y && new_y < Input::W {
+                    break new_y;
+                }
+            };
+
             let mut new_lines = state.lines[day].clone();
-            new_lines[index].y += dy;
+            new_lines[index].y = new_y;
             new_lines
         } else if neigh_type == 1 {
             let index = rng.gen_range(0..state.lines[day].len());
@@ -293,7 +302,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let mut new_lines = state.lines[day].clone();
             new_lines[index] = Separator::new(new_index, new_y);
             new_lines
-        } else if neigh_type == 2 {
+        } else {
             let day_diff = if rng.gen_bool(0.5) { 1 } else { -1 };
 
             let Some(target_lines) = state.lines.get(day.wrapping_add_signed(day_diff)) else {
@@ -305,77 +314,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let mut new_lines = state.lines[day].clone();
             new_lines[i1] = target_lines[i0];
             new_lines
-        } else if neigh_type == 3 {
-            let index0 = rng.gen_range(0..env.widths.len());
-            let diff = rng.gen_range(1..=3);
-
-            let index1 = if rng.gen_bool(0.5) {
-                index0 + diff
-            } else {
-                index0.wrapping_sub(diff)
-            };
-
-            if index1 >= env.widths.len() {
-                continue;
-            }
-
-            let mut new_lines = state.lines[day].clone();
-
-            for sep in new_lines.iter_mut() {
-                let index = sep.index;
-
-                let new_sep = if index == index0 {
-                    Separator::new(index1, sep.y)
-                } else if index == index1 {
-                    Separator::new(index0, sep.y)
-                } else {
-                    Separator::new(index, sep.y)
-                };
-
-                *sep = new_sep;
-            }
-
-            new_lines
-        } else {
-            let i = rng.gen_range(0..env.widths.len());
-
-            let mut targets = vec![];
-
-            for (j, l) in state.lines[day].iter().enumerate() {
-                if l.index == i {
-                    targets.push(j);
-                }
-            }
-
-            if targets.len() == 0 {
-                continue;
-            }
-
-            glidesort::sort_by_key(&mut targets, |j| state.lines[day][*j].y);
-
-            let mut y = 0;
-            let mut dy = vec![];
-
-            for &j in targets.iter() {
-                dy.push(state.lines[day][j].y - y);
-                y = state.lines[day][j].y;
-            }
-
-            dy.push(Input::W - y);
-
-            dy.shuffle(&mut rng);
-
-            let mut y = 0;
-
-            let mut new_lines = state.lines[day].clone();
-
-            for (&j, &dy) in targets.iter().zip(dy.iter()) {
-                y += dy;
-                new_lines[j].y = y;
-            }
-
-            new_lines
         };
+
         new_lines.sort_unstable();
 
         // スコア計算
