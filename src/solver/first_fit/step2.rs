@@ -88,8 +88,6 @@ impl State {
     }
 
     fn calc_day_score(&mut self, env: &Env, day: usize) -> Result<i64, ()> {
-        glidesort::sort(&mut self.lines[day]);
-
         let mut score = 0;
         score += self.calc_area_score(env, day)?;
         score += self.calc_line_score(env, day);
@@ -128,7 +126,7 @@ impl State {
             areas.push(area);
         }
 
-        glidesort::sort(&mut areas);
+        areas.sort_unstable();
 
         let mut score = 0;
 
@@ -352,6 +350,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
             new_lines
         };
+        new_lines.sort_unstable();
 
         // スコア計算
         let old_score = state.calc_day_score(env, day).unwrap_or(i64::MAX / 2);

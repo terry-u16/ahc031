@@ -1,10 +1,8 @@
 mod step1;
 mod step2;
 
-use rand::{Rng as _, SeedableRng as _};
-
 use super::{Input, Rect};
-use crate::{common::ChangeMinMax, solver::Solver};
+use crate::solver::Solver;
 
 pub struct FirstFitPacking {
     duration: f64,
