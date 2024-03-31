@@ -13,12 +13,12 @@ fn main() {
     let input = Input::read();
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
 
-    let first_fit = FirstFitPacking::new(0.2, 1.8);
+    let first_fit = FirstFitPacking::new(0.3, 1.7);
     let (mut best_result, mut best_score) = first_fit.solve(&input);
 
     eprintln!("first_fit score: {}", best_score);
 
-    let duration = 2.97 - input.since.elapsed().as_secs_f64();
+    let duration = 2.98 - input.since.elapsed().as_secs_f64();
     let bin_packing = BinPacking1d::new(duration);
     let (result, score) = bin_packing.solve(&input);
 
@@ -28,7 +28,7 @@ fn main() {
         best_result = result;
     }
 
-    let duration = 2.97 - input.since.elapsed().as_secs_f64();
+    let duration = 2.98 - input.since.elapsed().as_secs_f64();
 
     if duration > 0.1 {
         let annealer2d = Annealer2d::new(duration);
