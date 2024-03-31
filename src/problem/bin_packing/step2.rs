@@ -125,8 +125,6 @@ struct State {
 }
 
 impl State {
-    const SCORE_MUL: i64 = 1000000;
-
     fn new(mut lines: Vec<Separator>) -> Self {
         glidesort::sort(&mut lines);
         Self { lines }
@@ -174,18 +172,13 @@ impl State {
         glidesort::sort(&mut areas);
 
         let mut score = 0;
-        let days = env.day..(env.day + 1).min(env.input.days);
 
-        for (day, &mul) in days.zip([Self::SCORE_MUL, 1].iter()) {
-            let mul = mul * 100;
-
-            for (&req, &area) in env.input.requests[day].iter().zip(areas.iter()) {
-                let diff = (req - area) as i64;
-                score += diff.max(0) * mul;
-            }
+        for (&req, &area) in env.input.requests[env.day].iter().zip(areas.iter()) {
+            let diff = req - area;
+            score += diff.max(0);
         }
 
-        Ok(score)
+        Ok(score as i64 * 100)
     }
 
     fn calc_line_score(&self, env: &Env, prev_state: &State) -> i64 {
@@ -213,7 +206,7 @@ impl State {
             }
         }
 
-        score as i64 * Self::SCORE_MUL
+        score as i64
     }
 
     fn to_rects(&self, env: &Env) -> Vec<Rect> {
@@ -270,8 +263,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 1e13;
-    let temp1 = 1e3;
+    let temp0 = 1e6;
+    let temp1 = 1e0;
     let mut inv_temp = 1.0 / temp0;
 
     loop {
