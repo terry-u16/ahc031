@@ -33,7 +33,7 @@ fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
         let mut best_state = State::new(vec![]);
         let mut best_score = i64::MAX;
 
-        for _ in 0..1000 {
+        for _ in 0..10000 {
             let state = prev_state.clone().unwrap_or_else(|| State::new(vec![]));
             let mut state = state.gen_next(&env, &mut rng);
 
@@ -134,7 +134,8 @@ impl State {
                 let needed_area = needed_y * space.width;
 
                 let score = if area >= needed_area {
-                    (area - req) as i64
+                    let base_score = (area - req) as i64;
+                    rng.gen_range(0..=base_score)
                 } else {
                     (needed_area - area) as i64 * 100000000
                 };
