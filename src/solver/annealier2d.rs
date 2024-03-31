@@ -25,8 +25,6 @@ impl Solver for Annealer2d {
         let state = annealing(&env, state, duration);
         let score = state.calc_score(&env).unwrap();
 
-        eprintln!("{}", score);
-
         let mut result = vec![];
 
         for coords in &state.coords {
@@ -43,6 +41,8 @@ impl Solver for Annealer2d {
         (result, score)
     }
 }
+
+static mut AREA_BUF: Vec<i32> = vec![];
 
 #[derive(Debug, Clone)]
 struct Env {
@@ -71,7 +71,10 @@ impl State {
 
     fn calc_score(&self, env: &Env) -> Result<i64, ()> {
         let mut score = 1;
-        let mut areas = vec![];
+        let areas = unsafe {
+            AREA_BUF.clear();
+            &mut AREA_BUF
+        };
 
         for (reqs, coord) in env.input.requests.iter().zip(self.coords.iter()) {
             areas.clear();
@@ -86,9 +89,9 @@ impl State {
                 areas.push(area);
             }
 
-            glidesort::sort(&mut areas);
+            areas.sort_unstable();
 
-            for (req, area) in reqs.iter().zip(&areas) {
+            for (req, area) in reqs.iter().zip(areas.iter()) {
                 score += 100 * (req - area).max(0) as i64;
             }
         }
@@ -109,7 +112,10 @@ impl State {
 
     fn calc_score_day(&self, env: &Env, day: usize) -> Result<i64, ()> {
         let mut score = 0;
-        let mut areas = vec![];
+        let areas = unsafe {
+            AREA_BUF.clear();
+            &mut AREA_BUF
+        };
         let coord = &self.coords[day];
 
         for r in env.coord_indices.rects.iter() {
@@ -122,9 +128,9 @@ impl State {
             areas.push(area);
         }
 
-        glidesort::sort(&mut areas);
+        areas.sort_unstable();
 
-        for (req, area) in env.input.requests[day].iter().zip(&areas) {
+        for (req, area) in env.input.requests[day].iter().zip(areas.iter()) {
             score += 100 * (req - area).max(0) as i64;
         }
 
@@ -291,8 +297,6 @@ fn dp(input: &Input) -> Vec<i32> {
     }
 
     sizes.reverse();
-    eprintln!("best: {}", dp[input.n][SUM]);
-    eprintln!("{:?}", sizes);
 
     sizes
 }
@@ -459,6 +463,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             state.coords[day].coords[index] = prev_x;
         }
     }
+
+    eprintln!("all iter: {}", all_iter);
 
     best_solution
 }
