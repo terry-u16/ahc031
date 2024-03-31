@@ -6,7 +6,7 @@ use crate::{
     problem::{Input, Rect},
 };
 
-pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
+pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> (Vec<Vec<Rect>>, i64) {
     let trial_count = (3000 / (input.days * input.n)).max(5);
     let max_beam_width = trial_count / 2;
 
@@ -26,7 +26,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
     for day in 0..input.days {
         let mut next_beam = vec![];
         let each_duration =
-            (2.95 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
+            (2.85 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
 
         for i in 0..trial_count {
             let beam_state = &beam[i % beam.len()];
@@ -68,7 +68,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
         rects.push(s.to_rects(&env));
     }
 
-    rects
+    (rects, best_state.score)
 }
 
 #[derive(Debug, Clone)]

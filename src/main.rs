@@ -11,7 +11,8 @@ fn main() {
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
 
     let mut solver = BinPacking1d;
-    let result = solver.solve(&input);
+    let (result, score) = solver.solve(&input);
+    eprintln!("score: {}", score);
 
     for rects in result {
         for rect in rects.iter() {

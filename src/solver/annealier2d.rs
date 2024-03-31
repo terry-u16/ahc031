@@ -8,15 +8,16 @@ use super::{Input, Rect};
 pub struct Annealer2d;
 
 impl Solver for Annealer2d {
-    fn solve(&mut self, input: &Input) -> Vec<Vec<Rect>> {
+    fn solve(&mut self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
         let sizes = dp(&input);
         let (coords, indices) = build_squares(&sizes);
         let env = Env::new(input.clone(), indices.clone());
         let state = State::new(vec![coords; input.days]);
         let duration = 2.95 - input.since.elapsed().as_secs_f64();
         let state = annealing(&env, state, duration);
+        let score = state.calc_score(&env).unwrap();
 
-        eprintln!("{}", state.calc_score(&env).unwrap());
+        eprintln!("{}", score);
 
         let mut result = vec![];
 
@@ -31,7 +32,7 @@ impl Solver for Annealer2d {
             result.push(rects);
         }
 
-        result
+        (result, score)
     }
 }
 
