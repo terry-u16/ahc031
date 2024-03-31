@@ -13,7 +13,7 @@ impl Solver for Annealer2d {
         let (coords, indices) = build_squares(&sizes);
         let env = Env::new(input.clone(), indices.clone());
         let state = State::new(vec![coords; input.days]);
-        let duration = 2.95 - input.since.elapsed().as_secs_f64();
+        let duration = 2.85 - input.since.elapsed().as_secs_f64();
         let state = annealing(&env, state, duration);
         let score = state.calc_score(&env).unwrap();
 

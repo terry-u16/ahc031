@@ -22,7 +22,14 @@ impl Solver for BinPacking1d {
             }
         } else {
             let mut solver = annealier2d::Annealer2d;
-            solver.solve(&input)
+            let (rect0, score0) = solver.solve(&input);
+            let (rect1, score1) = FirstFitPacking::new(0.1).solve(input);
+
+            if score0 < score1 {
+                (rect0, score0)
+            } else {
+                (rect1, score1)
+            }
         };
         rects
     }
