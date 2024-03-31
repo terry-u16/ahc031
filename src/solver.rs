@@ -5,5 +5,5 @@ pub mod first_fit;
 use crate::problem::{Input, Rect};
 
 pub trait Solver {
-    fn solve(&mut self, input: &Input) -> (Vec<Vec<Rect>>, i64);
+    fn solve(&self, input: &Input) -> (Vec<Vec<Rect>>, i64);
 }

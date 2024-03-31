@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use itertools::Itertools;
 use rand::prelude::*;
 
@@ -6,7 +8,8 @@ use crate::{
     problem::{Input, Rect},
 };
 
-pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> (Vec<Vec<Rect>>, i64) {
+pub fn divide(input: &Input, dividers: &[Vec<i32>], duration: f64) -> (Vec<Vec<Rect>>, i64) {
+    let since = Instant::now();
     let trial_count = (3000 / (input.days * input.n)).max(5);
     let max_beam_width = trial_count / 2;
 
@@ -25,8 +28,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> (Vec<Vec<Rect>>, i64) {
 
     for day in 0..input.days {
         let mut next_beam = vec![];
-        let each_duration =
-            (1.5 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
+        let each_duration = (duration - since.elapsed().as_secs_f64()) / (input.days - day) as f64;
 
         for i in 0..trial_count {
             let beam_state = &beam[i % beam.len()];

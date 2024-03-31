@@ -12,6 +12,7 @@ pub fn devide(
     input: &Input,
     dividers: &[i32],
     separators: Vec<Vec<(usize, i32)>>,
+    duration: f64,
 ) -> (Vec<Vec<Rect>>, i64) {
     let env = Env::new(input, dividers);
 
@@ -23,11 +24,9 @@ pub fn devide(
                 .collect_vec()
         })
         .collect_vec();
-    eprintln!("{:?}", separators);
-    let mut state = State::new(separators, &env);
-    eprintln!("init score: {:?}", state.calc_score(&env).unwrap_or(INF));
 
-    let duration = 1.35;
+    let state = State::new(separators, &env);
+
     let mut state = annealing(&env, state, duration);
     let score = state.calc_score(&env).unwrap_or(INF);
 

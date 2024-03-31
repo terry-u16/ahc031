@@ -1,36 +1,31 @@
 pub mod step1;
 mod step2;
 
-use super::{Input, Rect};
-use crate::solver::{annealier2d, first_fit::FirstFitPacking, Solver};
+use std::time::Instant;
 
-pub struct BinPacking1d;
+use super::{Input, Rect};
+use crate::solver::Solver;
+
+pub struct BinPacking1d {
+    duration: f64,
+}
+
+impl BinPacking1d {
+    pub fn new(duration: f64) -> Self {
+        Self { duration }
+    }
+}
 
 impl Solver for BinPacking1d {
-    fn solve(&mut self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
+    fn solve(&self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
+        let since = Instant::now();
         let (dividers, div_size) = step1::get_best_width(input);
-        eprintln!("{:?}", dividers);
 
-        let rects = if div_size >= 3 {
-            let (rect0, score0) = step2::divide(input, &dividers);
-            let (rect1, score1) = FirstFitPacking::new(0.1).solve(input);
-
-            if score0 < score1 {
-                (rect0, score0)
-            } else {
-                (rect1, score1)
-            }
+        if div_size >= 3 {
+            let duration = self.duration - since.elapsed().as_secs_f64();
+            step2::divide(input, &dividers, duration)
         } else {
-            let mut solver = annealier2d::Annealer2d;
-            let (rect0, score0) = solver.solve(&input);
-            let (rect1, score1) = FirstFitPacking::new(0.1).solve(input);
-
-            if score0 < score1 {
-                (rect0, score0)
-            } else {
-                (rect1, score1)
-            }
-        };
-        rects
+            (vec![], i64::MAX)
+        }
     }
 }

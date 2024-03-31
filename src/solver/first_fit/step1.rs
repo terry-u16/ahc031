@@ -5,7 +5,7 @@ pub fn generate_init_solution(input: &Input, duration: f64) -> (Vec<i32>, Vec<Ve
     let state = State::new(vec![Input::W], vec![false; input.n]);
     let state = annealing(input, state, duration);
     let score = state.calc_score(input);
-    eprintln!("score: {}, {:?}", score, state);
+    eprintln!("first_fit - step1 score: {}", score);
 
     state.restore(input)
 }

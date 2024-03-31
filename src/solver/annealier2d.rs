@@ -5,15 +5,23 @@ use crate::{common::ChangeMinMax as _, solver::Solver};
 
 use super::{Input, Rect};
 
-pub struct Annealer2d;
+pub struct Annealer2d {
+    duration: f64,
+}
+
+impl Annealer2d {
+    pub fn new(duration: f64) -> Self {
+        Self { duration }
+    }
+}
 
 impl Solver for Annealer2d {
-    fn solve(&mut self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
+    fn solve(&self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
         let sizes = dp(&input);
         let (coords, indices) = build_squares(&sizes);
         let env = Env::new(input.clone(), indices.clone());
         let state = State::new(vec![coords; input.days]);
-        let duration = 1.45 - input.since.elapsed().as_secs_f64();
+        let duration = self.duration;
         let state = annealing(&env, state, duration);
         let score = state.calc_score(&env).unwrap();
 
