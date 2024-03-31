@@ -2,7 +2,7 @@ pub mod step1;
 mod step2;
 
 use super::{Input, Rect};
-use crate::{problem::annealier2d, solver::Solver};
+use crate::{solver::annealier2d, solver::Solver};
 
 pub struct BinPacking1d;
 

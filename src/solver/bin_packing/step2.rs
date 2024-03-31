@@ -277,7 +277,6 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let mut best_score = current_score;
 
     let mut all_iter = 0;
-    let mut valid_iter = 0;
     let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
 
     let duration_inv = 1.0 / duration;
@@ -403,7 +402,6 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             continue;
         };
         let score_diff = new_score - current_score;
-        valid_iter += 1;
 
         if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
             // 解の更新

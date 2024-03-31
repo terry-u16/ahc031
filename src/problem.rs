@@ -1,8 +1,3 @@
-pub mod annealier2d;
-pub mod bin_packing;
-pub mod break_and_best_fit;
-pub mod first_fit;
-
 use std::{fmt::Display, time::Instant};
 
 use proconio::input;

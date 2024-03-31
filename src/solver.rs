@@ -1,3 +1,6 @@
+pub mod annealier2d;
+pub mod bin_packing;
+
 use crate::problem::{Input, Rect};
 
 pub trait Solver {
