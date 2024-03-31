@@ -300,23 +300,23 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         }
 
         // 変形
-        let neigh_type = rng.gen_range(0..5);
+        let neigh_type = rng.gen_range(0..10);
 
-        let mut new_state = if neigh_type == 0 {
+        let mut new_state = if neigh_type < 5 {
             let index = rng.gen_range(0..state.lines.len());
             let sign = if rng.gen_bool(0.5) { 1 } else { -1 };
             let dy = sign * 10f64.powf(rng.gen_range(0.0..3.0)).round() as i32;
             let mut new_state = state.clone();
             new_state.lines[index].y += dy;
             new_state
-        } else if neigh_type == 1 {
+        } else if neigh_type < 7 {
             let index = rng.gen_range(0..state.lines.len());
             let new_index = rng.gen_range(0..env.widths.len());
             let new_y = rng.gen_range(1..Input::W);
             let mut new_state = state.clone();
             new_state.lines[index] = Separator::new(new_index, new_y);
             new_state
-        } else if neigh_type == 2 {
+        } else if neigh_type == 7 {
             let Some(prev_state) = &env.prev_state else {
                 continue;
             };
@@ -326,7 +326,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             let mut new_state = state.clone();
             new_state.lines[i1] = prev_state.lines[i0];
             new_state
-        } else if neigh_type == 3 {
+        } else if neigh_type == 8 {
             let index0 = rng.gen_range(0..env.widths.len());
             let diff = rng.gen_range(1..=3);
 
