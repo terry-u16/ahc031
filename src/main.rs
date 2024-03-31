@@ -13,7 +13,7 @@ fn main() {
     let input = Input::read();
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
 
-    let first_fit = FirstFitPacking::new(0.1, 1.9);
+    let first_fit = FirstFitPacking::new(0.2, 1.8);
     let (mut best_result, mut best_score) = first_fit.solve(&input);
 
     eprintln!("first_fit score: {}", best_score);
