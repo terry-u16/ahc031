@@ -26,7 +26,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> (Vec<Vec<Rect>>, i64) {
     for day in 0..input.days {
         let mut next_beam = vec![];
         let each_duration =
-            (2.85 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
+            (1.5 - input.since.elapsed().as_secs_f64()) / (input.days - day) as f64;
 
         for i in 0..trial_count {
             let beam_state = &beam[i % beam.len()];
