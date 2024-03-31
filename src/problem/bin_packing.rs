@@ -8,10 +8,10 @@ pub struct BinPacking1d;
 
 impl Solver for BinPacking1d {
     fn solve(&mut self, input: &Input) -> Vec<Vec<Rect>> {
-        let dividers = step1::get_best_width(input);
+        let (dividers, div_size) = step1::get_best_width(input);
         eprintln!("{:?}", dividers);
 
-        let rects = if dividers.len() >= 3 {
+        let rects = if div_size >= 3 {
             step2::divide(input, &dividers)
         } else {
             let mut solver = annealier2d::Annealer2d;

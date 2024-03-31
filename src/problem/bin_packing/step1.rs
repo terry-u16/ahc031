@@ -3,7 +3,7 @@ use rand::{Rng as _, SeedableRng as _};
 
 use crate::{common::ChangeMinMax as _, problem::Input};
 
-pub fn get_best_width(input: &Input) -> Vec<i32> {
+pub fn get_best_width(input: &Input) -> (Vec<Vec<i32>>, usize) {
     let sum_reqs = input
         .requests
         .iter()
@@ -16,20 +16,10 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
     );
 
     let mut dividers = vec![0, Input::W];
+    let mut div_size = 1;
 
     for div in 2..input.n {
-        let lines = (0..=div)
-            .map(|i| (Input::W as usize * i / div) as i32)
-            .collect_vec();
-        let widths = lines
-            .iter()
-            .tuple_windows()
-            .map(|(&a, &b)| b - a)
-            .collect_vec();
-        let mut state = State::new(widths);
-        state = annealing(input, state, 0.01);
-
-        state.widths.sort_unstable();
+        let state = gen_dividers(input, div);
         let score = state.calc_score(input).unwrap();
         eprintln!("[Div {}] score: {}, {:?}", div, score, state.widths);
 
@@ -45,9 +35,50 @@ pub fn get_best_width(input: &Input) -> Vec<i32> {
         }
 
         dividers = divs;
+        div_size = div;
     }
 
-    dividers
+    let mut divider_set = vec![dividers];
+
+    if div_size == 1 {
+        return (divider_set, div_size);
+    }
+
+    for _ in 0..9 {
+        let state = gen_dividers(input, div_size);
+        let score = state.calc_score(input).unwrap();
+
+        if score > 0 {
+            continue;
+        }
+
+        let mut divs = vec![0];
+
+        for &w in state.widths.iter() {
+            let w = w + divs.last().unwrap();
+            divs.push(w);
+        }
+
+        divider_set.push(divs);
+    }
+
+    (divider_set, div_size)
+}
+
+fn gen_dividers(input: &Input, div: usize) -> State {
+    let lines = (0..=div)
+        .map(|i| (Input::W as usize * i / div) as i32)
+        .collect_vec();
+    let widths = lines
+        .iter()
+        .tuple_windows()
+        .map(|(&a, &b)| b - a)
+        .collect_vec();
+    let mut state = State::new(widths);
+    state = annealing(input, state, 0.01);
+
+    state.widths.sort_unstable();
+    state
 }
 
 #[derive(Debug, Clone)]

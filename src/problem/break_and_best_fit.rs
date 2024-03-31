@@ -10,7 +10,8 @@ pub struct BreakAndBestFit;
 
 impl Solver for BreakAndBestFit {
     fn solve(&mut self, input: &Input) -> Vec<Vec<Rect>> {
-        let dividers = crate::problem::bin_packing::step1::get_best_width(input);
+        let (dividers, _) = crate::problem::bin_packing::step1::get_best_width(input);
+        let dividers = dividers[0].clone();
         eprintln!("{:?}", dividers);
 
         let rects = if dividers.len() >= 3 {

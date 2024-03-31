@@ -12,8 +12,8 @@ fn main() {
 
     let mut _solver = Annealer2d;
     let mut solver = FirstFitPacking;
-    let mut solver = BinPacking1d;
     let mut solver = BreakAndBestFit;
+    let mut solver = BinPacking1d;
     let result = solver.solve(&input);
 
     for rects in result {
