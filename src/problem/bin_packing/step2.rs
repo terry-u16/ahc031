@@ -35,7 +35,7 @@ pub fn divide(input: &Input, dividers: &[Vec<i32>]) -> Vec<Vec<Rect>> {
                 &input,
                 &dividers[beam_state.divider_index],
                 day,
-                Some(state.clone()),
+                states.last().cloned(),
             );
 
             let duration = each_duration / trial_count as f64;
@@ -415,8 +415,6 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             }
         }
     }
-
-    eprintln!("iter: {}, valid: {}", all_iter, valid_iter);
 
     best_solution
 }
