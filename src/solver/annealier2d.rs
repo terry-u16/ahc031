@@ -175,14 +175,6 @@ impl State {
 
         score
     }
-
-    fn calc_score_day(&self, env: &Env, day: usize) -> Result<i64, ()> {
-        let mut score = self.calc_area_score(env, day)?;
-        score += self.calc_line_score(env, day);
-        score += self.calc_line_score(env, day + 1);
-
-        Ok(score)
-    }
 }
 
 #[derive(Debug, Clone)]
