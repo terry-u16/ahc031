@@ -20,7 +20,7 @@ impl Solver for Annealer2d {
         let sizes = dp(&input);
         let (coords, indices) = build_squares(&sizes);
         let env = Env::new(input.clone(), indices.clone());
-        let state = State::new(vec![coords; input.days]);
+        let state = State::new(&env, vec![coords; input.days]);
         let duration = self.duration;
         let state = annealing(&env, state, duration);
         let score = state.calc_score(&env).unwrap();
@@ -62,11 +62,30 @@ impl Env {
 #[derive(Debug, Clone)]
 struct State {
     coords: Vec<LineCoords>,
+    area_scores: Vec<i64>,
+    line_scores: Vec<i64>,
 }
 
 impl State {
-    fn new(coords: Vec<LineCoords>) -> Self {
-        Self { coords }
+    fn new(env: &Env, coords: Vec<LineCoords>) -> Self {
+        let mut state = Self {
+            coords,
+            area_scores: vec![],
+            line_scores: vec![],
+        };
+
+        for day in 0..env.input.days {
+            state
+                .area_scores
+                .push(state.calc_area_score(&env, day).unwrap());
+            state.line_scores.push(state.calc_line_score(&env, day));
+        }
+
+        state
+            .line_scores
+            .push(state.calc_line_score(&env, env.input.days));
+
+        state
     }
 
     fn calc_score(&self, env: &Env) -> Result<i64, ()> {
@@ -110,7 +129,7 @@ impl State {
         Ok(score)
     }
 
-    fn calc_score_day(&self, env: &Env, day: usize) -> Result<i64, ()> {
+    fn calc_area_score(&self, env: &Env, day: usize) -> Result<i64, ()> {
         let mut score = 0;
         let areas = unsafe {
             AREA_BUF.clear();
@@ -131,22 +150,36 @@ impl State {
         areas.sort_unstable();
 
         for (req, area) in env.input.requests[day].iter().zip(areas.iter()) {
-            score += 100 * (req - area).max(0) as i64;
+            score += (req - area).max(0) as i64;
         }
 
-        let since = day.saturating_sub(1);
-        let until = (day + 1).min(env.input.days - 1);
+        Ok(score * 100)
+    }
 
-        // 線分が偶然重なることを考慮していないので、厳密には正しくない
+    fn calc_line_score(&self, env: &Env, day: usize) -> i64 {
+        let Some(prev_coord) = self.coords.get(day - 1) else {
+            return 0;
+        };
+
+        let Some(next_coord) = self.coords.get(day) else {
+            return 0;
+        };
+
+        let mut score = 0;
+
         for l in env.coord_indices.lines.iter() {
-            let mut l0 = self.coords[since].get_line(l);
-
-            for coord in self.coords[since + 1..=until].iter() {
-                let l1 = coord.get_line(l);
-                score += l0.diff(&l1) as i64;
-                l0 = l1;
-            }
+            let l0 = prev_coord.get_line(l);
+            let l1 = next_coord.get_line(l);
+            score += l0.diff(&l1) as i64;
         }
+
+        score
+    }
+
+    fn calc_score_day(&self, env: &Env, day: usize) -> Result<i64, ()> {
+        let mut score = self.calc_area_score(env, day)?;
+        score += self.calc_line_score(env, day);
+        score += self.calc_line_score(env, day + 1);
 
         Ok(score)
     }
@@ -386,14 +419,13 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
 
     let temp0 = 1e6;
     let temp1 = 1e1;
-    let mut inv_temp = 1.0 / temp0;
+    let mut temp = temp0;
 
     loop {
         all_iter += 1;
         if (all_iter & ((1 << 4) - 1)) == 0 {
             let time = (std::time::Instant::now() - since).as_secs_f64() * duration_inv;
-            let temp = f64::powf(temp0, 1.0 - time) * f64::powf(temp1, time);
-            inv_temp = 1.0 / temp;
+            temp = f64::powf(temp0, 1.0 - time) * f64::powf(temp1, time);
 
             if time >= 1.0 {
                 break;
@@ -442,19 +474,43 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
         };
 
         // スコア計算
-        let prev_score_day = state.calc_score_day(&env, day).unwrap();
+        // 先に閾値を求めることで評価を高速化する
+        let prev_score_day =
+            state.area_scores[day] + state.line_scores[day] + state.line_scores[day + 1];
+
+        let score_threshold = prev_score_day as f64 - temp * rng.gen_range(0.0f64..1.0).ln();
+
         let prev_x = state.coords[day].coords[index];
         state.coords[day].coords[index] = x;
 
-        let Ok(new_score_day) = state.calc_score_day(&env, day) else {
+        let prev_line_score = state.calc_line_score(env, day);
+
+        if prev_line_score as f64 > score_threshold {
+            state.coords[day].coords[index] = prev_x;
+            continue;
+        }
+
+        let next_line_score = state.calc_line_score(env, day + 1);
+
+        if (prev_line_score + next_line_score) as f64 > score_threshold {
+            state.coords[day].coords[index] = prev_x;
+            continue;
+        }
+
+        let Ok(area_score) = state.calc_area_score(&env, day) else {
             state.coords[day].coords[index] = prev_x;
             continue;
         };
+
+        let new_score_day = area_score + prev_line_score + next_line_score;
         let score_diff = new_score_day - prev_score_day;
 
-        if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
+        if new_score_day as f64 <= score_threshold {
             // 解の更新
             current_score += score_diff;
+            state.area_scores[day] = area_score;
+            state.line_scores[day] = prev_line_score;
+            state.line_scores[day + 1] = next_line_score;
 
             if best_score.change_min(current_score) {
                 best_solution = state.clone();
