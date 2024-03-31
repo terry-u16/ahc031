@@ -11,8 +11,8 @@ fn main() {
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio() * 100.0);
 
     let mut _solver = Annealer2d;
-    let mut _solver = BinPacking1d;
     let mut solver = FirstFitPacking;
+    let mut solver = BinPacking1d;
     let result = solver.solve(&input);
 
     for rects in result {

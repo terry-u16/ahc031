@@ -7,39 +7,85 @@ use crate::{
 };
 
 pub fn divide(input: &Input, dividers: &[i32]) -> Vec<Vec<Rect>> {
-    let mut rects = vec![];
-    let mut prev_state = None;
     let each_duration = (2.9 - input.since.elapsed().as_secs_f64()) / input.days as f64;
+    let trial_count = (3000 / (input.days * input.n)).max(5);
+    let max_beam_width = trial_count / 2;
+
+    let separator_count = input.n - (dividers.len() - 1);
+    let lines = (1..=separator_count)
+        .map(|i| Separator::new(0, i as i32))
+        .collect_vec();
+    let init_state = State::new(lines);
+    let env = Env::new(&input, dividers, 0, None);
+
+    let mut beam = vec![BeamState::new(&env, vec![init_state])];
 
     for day in 0..input.days {
-        let env = Env::new(&input, dividers, day, prev_state.clone());
-        let mut state = prev_state.unwrap_or_else(|| {
-            let separator_count = input.n - (dividers.len() - 1);
-            let lines = (1..=separator_count)
-                .map(|i| Separator::new(0, i as i32))
-                .collect_vec();
-            State::new(lines)
-        });
+        let mut next_beam = vec![];
 
-        let trial_count = (3000 / (input.days * input.n)).max(5);
-        let mut best_score = state.calc_score(&env).unwrap();
-        let mut best_state = state.clone();
+        for i in 0..trial_count {
+            let mut states = beam[i % beam.len()].states.clone();
+            let state = states.last().unwrap().clone();
+            let env = Env::new(&input, dividers, day, Some(state.clone()));
 
-        for _ in 0..trial_count {
             let duration = each_duration / trial_count as f64;
-            let mut state = annealing(&env, state.clone(), duration);
-            let score = state.calc_score(&env).unwrap();
+            let state = annealing(&env, state.clone(), duration);
+            states.push(state);
 
-            if best_score.change_min(score) {
-                best_state = state;
-            }
+            next_beam.push(BeamState::new(&env, states));
         }
 
-        rects.push(best_state.to_rects(&env));
-        prev_state = Some(best_state);
+        next_beam.sort_unstable_by_key(|s| s.score);
+
+        if next_beam.len() > max_beam_width {
+            next_beam.truncate(max_beam_width);
+        }
+
+        beam = next_beam;
+    }
+
+    let best_state = &mut beam[0];
+    best_state.states.remove(0);
+    let mut rects = vec![];
+
+    for s in best_state.states.iter() {
+        rects.push(s.to_rects(&env));
     }
 
     rects
+}
+
+#[derive(Debug, Clone)]
+struct BeamState {
+    states: Vec<State>,
+    score: i64,
+}
+
+impl BeamState {
+    fn new(env: &Env, mut states: Vec<State>) -> Self {
+        let score = states.last_mut().unwrap().calc_score(&env).unwrap();
+        Self { states, score }
+    }
+}
+
+impl PartialEq for BeamState {
+    fn eq(&self, other: &Self) -> bool {
+        self.score == other.score
+    }
+}
+
+impl Eq for BeamState {}
+
+impl PartialOrd for BeamState {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.score.partial_cmp(&other.score)
+    }
+}
+
+impl Ord for BeamState {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.score.cmp(&other.score)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -214,6 +260,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let mut best_score = current_score;
 
     let mut all_iter = 0;
+    let mut valid_iter = 0;
     let mut rng = rand_pcg::Pcg64Mcg::from_entropy();
 
     let duration_inv = 1.0 / duration;
@@ -339,6 +386,7 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             continue;
         };
         let score_diff = new_score - current_score;
+        valid_iter += 1;
 
         if score_diff <= 0 || rng.gen_bool(f64::exp(-score_diff as f64 * inv_temp)) {
             // 解の更新
@@ -350,6 +398,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
             }
         }
     }
+
+    eprintln!("iter: {}, valid: {}", all_iter, valid_iter);
 
     best_solution
 }
