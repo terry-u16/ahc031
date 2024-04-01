@@ -221,8 +221,8 @@ fn annealing(input: &Input, initial_solution: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 1e7;
-    let temp1 = 1e0;
+    let temp0 = input.first_fit_config.step1_temp0;
+    let temp1 = input.first_fit_config.step1_temp1;
     let mut temp = temp0;
 
     loop {

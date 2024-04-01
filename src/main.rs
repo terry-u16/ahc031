@@ -1,6 +1,7 @@
 mod common;
 mod problem;
 mod solver;
+mod params;
 
 use crate::common::ChangeMinMax;
 use crate::problem::Input;
@@ -13,7 +14,9 @@ fn main() {
     let input = Input::read();
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
 
-    let first_fit = FirstFitPacking::new(0.3, 2.0);
+    let t0 = 2.2 * input.first_fit_config.step1_ratio;
+    let t1 = 2.2 * (1.0 - input.first_fit_config.step1_ratio);
+    let first_fit = FirstFitPacking::new(t0, t1);
     let (mut best_result, mut best_score) = first_fit.solve(&input);
 
     eprintln!("first_fit score: {}", best_score);

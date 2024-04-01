@@ -32,7 +32,7 @@
     ],
     "CloudExecutionSteps": [
       {
-        "ExecutionCommand": "ahc031 0.48961893921149535 13725974.31472906 22.09549287429146 54.52116993786461 4.333795882620964",
+        "ExecutionCommand": "ahc031",
         "StdInPath": "data/in/{SEED}.txt",
         "StdOutPath": "data/out/{SEED}.txt",
         "StdErrorPath": "data/err/{SEED}.txt"
