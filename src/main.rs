@@ -1,18 +1,31 @@
 mod common;
+mod params;
 mod problem;
 mod solver;
-mod params;
 
 use crate::common::ChangeMinMax;
 use crate::problem::Input;
 use crate::solver::annealier2d::Annealer2d;
 use crate::solver::first_fit::FirstFitPacking;
+use crate::solver::score_one::ScoreOne;
 use solver::bin_packing::BinPacking1d;
 use solver::Solver as _;
 
 fn main() {
     let input = Input::read();
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
+
+    let (one_result, one_score) = ScoreOne.solve(&input);
+
+    if one_score == 1 {
+        for rects in one_result {
+            for rect in rects.iter() {
+                println!("{}", rect);
+            }
+        }
+
+        return;
+    }
 
     let t0 = 2.6 * input.first_fit_config.step1_ratio;
     let t1 = 2.6 * (1.0 - input.first_fit_config.step1_ratio);
