@@ -75,7 +75,7 @@ fn load_all_scores(args: &Args) -> Result<(HashMap<u64, i64>, PathBuf), anyhow::
         })
         .collect_vec();
 
-    let trials = entries
+    let mut trials = entries
         .par_iter()
         .filter_map(|(path, s)| {
             serde_json::from_str(s)
@@ -84,6 +84,7 @@ fn load_all_scores(args: &Args) -> Result<(HashMap<u64, i64>, PathBuf), anyhow::
         })
         .collect::<Vec<_>>();
     let mut last_file = None;
+    trials.sort_unstable_by_key(|t| t.1.time_stamp.clone());
 
     for (path, trial) in trials {
         for case in trial.results {

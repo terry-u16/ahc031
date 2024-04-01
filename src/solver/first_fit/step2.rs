@@ -297,8 +297,8 @@ fn annealing(env: &Env, mut state: State, duration: f64) -> State {
     let duration_inv = 1.0 / duration;
     let since = std::time::Instant::now();
 
-    let temp0 = 2e2;
-    let temp1 = 3e0;
+    let temp0 = env.input.first_fit_config.step2_temp0;
+    let temp1 = env.input.first_fit_config.step2_temp1; 
     let mut temp = temp0;
     let mut new_line_buffer = state.lines[0].clone();
 

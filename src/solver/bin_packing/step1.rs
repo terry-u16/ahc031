@@ -1,18 +1,28 @@
+use std::time::Instant;
+
 use itertools::Itertools as _;
 use rand::{Rng as _, SeedableRng as _};
 
 use crate::{common::ChangeMinMax as _, problem::Input};
 
-pub fn get_best_width(input: &Input) -> (Vec<Vec<i32>>, usize) {
+pub fn get_best_width(input: &Input, duration: f64) -> (Vec<Vec<i32>>, usize) {
+    let since = Instant::now();
     let mut dividers = vec![0, Input::W];
-    let mut div_size = 1;
+    let mut all_divs = vec![vec![]; input.n + 1];
+    all_divs[1] = dividers.clone();
 
-    for div in 2..input.n {
-        let state = gen_dividers(input, div);
+    let mut ok = 1;
+    let mut ng = input.n;
+
+    while ng - ok > 1 {
+        let mid = (ok + ng) / 2;
+        let state = gen_dividers(input, mid);
         let score = state.calc_score(input).unwrap();
 
-        if score > 0 {
-            break;
+        if score <= 0 {
+            ok = mid;
+        } else {
+            ng = mid;
         }
 
         let mut divs = vec![0];
@@ -22,17 +32,27 @@ pub fn get_best_width(input: &Input) -> (Vec<Vec<i32>>, usize) {
             divs.push(w);
         }
 
-        dividers = divs;
-        div_size = div;
+        all_divs[mid] = divs;
+
+        if since.elapsed().as_secs_f64() > duration {
+            break;
+        }
     }
 
+    let div_size = ok;
+
+    dividers = all_divs[ok].clone();
     let mut divider_set = vec![dividers];
 
     if div_size == 1 {
         return (divider_set, div_size);
     }
 
-    for _ in 0..9 {
+    for _ in 0..3 {
+        if since.elapsed().as_secs_f64() > duration {
+            break;
+        }
+
         let state = gen_dividers(input, div_size);
         let score = state.calc_score(input).unwrap();
 
