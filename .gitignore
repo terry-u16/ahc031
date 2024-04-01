@@ -3,3 +3,7 @@
 /*.html
 *.exe
 expanded.rs
+target
+vis
+rel
+ahc031
