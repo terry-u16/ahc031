@@ -14,14 +14,14 @@ fn main() {
     let input = Input::read();
     eprintln!("packing_ratio: {:.2}%", input.packing_ratio * 100.0);
 
-    let t0 = 2.2 * input.first_fit_config.step1_ratio;
-    let t1 = 2.2 * (1.0 - input.first_fit_config.step1_ratio);
+    let t0 = 2.6 * input.first_fit_config.step1_ratio;
+    let t1 = 2.6 * (1.0 - input.first_fit_config.step1_ratio);
     let first_fit = FirstFitPacking::new(t0, t1);
     let (mut best_result, mut best_score) = first_fit.solve(&input);
 
     eprintln!("first_fit score: {}", best_score);
 
-    let duration = 2.7 - input.since.elapsed().as_secs_f64();
+    let duration = 2.8 - input.since.elapsed().as_secs_f64();
     let bin_packing = BinPacking1d::new(duration);
     let (result, score) = bin_packing.solve(&input);
 

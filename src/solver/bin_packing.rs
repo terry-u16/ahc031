@@ -19,7 +19,7 @@ impl BinPacking1d {
 impl Solver for BinPacking1d {
     fn solve(&self, input: &Input) -> (Vec<Vec<Rect>>, i64) {
         let since = Instant::now();
-        let (dividers, div_size) = step1::get_best_width(input);
+        let (dividers, div_size) = step1::get_best_width(input, self.duration);
 
         if div_size >= 3 {
             let duration = (self.duration - since.elapsed().as_secs_f64()).max(0.01);
