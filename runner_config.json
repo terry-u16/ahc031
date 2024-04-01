@@ -7,10 +7,10 @@
     "StartSeed": 0,
     "EndSeed": 1000,
     "ReferenceScore": 1000000,
-    "LocalParallelCount": 180,
+    "LocalParallelCount": 16,
     "CloudParallelCount": 300,
-    "SummaryFilePath": "./data/score_history.txt",
-    "ResultDirectoryPath": "./data/results"
+    "SummaryFilePath": ".\\data\\score_history.txt",
+    "ResultDirectoryPath": ".\\data\\results"
   },
   "ExecutionOption": {
     "ScoreRegex": "^Score = (?<score>\\d+)$",
@@ -18,13 +18,13 @@
     "Timeout": "00:00:30",
     "LocalExecutionSteps": [
       {
-        "ExecutionCommand": "ahc031",
+        "ExecutionCommand": "ahc031.exe",
         "StdInPath": "data/in/{SEED}.txt",
         "StdOutPath": "data/out/{SEED}.txt",
         "StdErrorPath": "data/err/{SEED}.txt"
       },
       {
-        "ExecutionCommand": "vis data/in/{SEED}.txt data/out/{SEED}.txt",
+        "ExecutionCommand": "vis.exe data/in/{SEED}.txt data/out/{SEED}.txt",
         "StdInPath": null,
         "StdOutPath": null,
         "StdErrorPath": null
@@ -32,7 +32,7 @@
     ],
     "CloudExecutionSteps": [
       {
-        "ExecutionCommand": "ahc031 0.48961893921149535 13725974.31472906 22.09549287429146 54.52116993786461 4.333795882620964",
+        "ExecutionCommand": "ahc031",
         "StdInPath": "data/in/{SEED}.txt",
         "StdOutPath": "data/out/{SEED}.txt",
         "StdErrorPath": "data/err/{SEED}.txt"
@@ -58,13 +58,5 @@
         "Destination": "src/bin/main.rs"
       }
     ]
-  },
-  "GoogleCloudOptions": {
-    "RunEndpoint": "null",
-    "RustCompilerEndpoint": "null",
-    "BucketName": "null"
-  },
-  "BlobClientOption": {
-    "ConnectionString": "null"
   }
 }
